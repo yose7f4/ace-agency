@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
+import { createBrowserClient } from '@/lib/supabase/client';
+import type { Offer } from '@/lib/supabase/types';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -27,75 +29,152 @@ import {
   MessageSquare,
   HelpCircle,
   ExternalLink,
-  ChevronDown
+  ChevronDown,
+  Search,
+  Compass,
+  MapPin
 } from 'lucide-react';
 
-interface Vacancy {
-  id: string;
-  title: string;
-  company: string;
-  language: string;
-  level: string;
-  salary: string;
-  workStyle: string;
-  location: string;
-  commission: string;
-  badge?: string;
-  description: string;
-}
-
-const FEATURED_VACANCIES: Vacancy[] = [
+const FALLBACK_BPO_OFFERS = [
   {
-    id: 'de-tech-lead',
-    title: 'Senior German Technical Support Specialist',
-    company: 'Tier-1 International BPO',
-    language: 'German',
-    level: 'C1 / Fluent',
-    salary: '38,000 – 48,000 EGP / mo',
-    workStyle: 'Hybrid / Remote Options',
-    location: 'Cairo (New Cairo & Maadi)',
-    commission: '6,500 EGP Recruiter Payout',
-    badge: 'Urgent Hiring',
-    description: 'Providing elite tier-2 technical resolution for German enterprise accounts. Includes laptop, transport allowance, and private medical insurance.'
-  },
-  {
-    id: 'it-cs-rep',
-    title: 'Italian VIP Customer Relationship Advisor',
-    company: 'Global FinTech Support Hub',
-    language: 'Italian',
-    level: 'B2 / C1',
-    salary: '32,000 – 40,000 EGP / mo',
-    workStyle: 'On-site / Door-to-Door Shuttle',
-    location: '6th of October City, Giza',
-    commission: '5,000 EGP Recruiter Payout',
-    badge: 'Top Commission',
-    description: 'Handling incoming financial inquiries and VIP client onboarding for European mobile banking users. Rapid promotion tracks to Team Lead.'
-  },
-  {
-    id: 'fr-ecommerce',
-    title: 'French E-Commerce Solutions Executive',
-    company: 'Multinational Retail Network',
-    language: 'French',
-    level: 'B2+ / C1',
-    salary: '29,000 – 36,000 EGP / mo',
-    workStyle: 'Work from Home (Equipment Provided)',
-    location: 'Cairo / Giza (All Areas)',
-    commission: '4,500 EGP Recruiter Payout',
-    badge: 'Remote Role',
-    description: 'Assisting French online shoppers with orders, logistics, and account security. Full paid training and performance bonuses.'
-  },
-  {
-    id: 'en-b2b-saas',
-    title: 'English Global B2B Account Specialist',
-    company: 'US Cloud Infrastructure Firm',
+    id: '4831211f-b408-4deb-acda-bf75839dd71d',
+    title: 'Telesales Agent',
+    company_name: 'LPM',
     language: 'English',
-    level: 'C1 Fluent',
-    salary: '22,000 – 28,000 EGP / mo',
-    workStyle: 'Hybrid (2 Days Office)',
-    location: 'Smart Village, Giza',
-    commission: '3,500 EGP Recruiter Payout',
-    badge: 'Fresh Grads Welcome',
-    description: 'Managing enterprise ticket pipelines for North American cloud customers. High-paced collaborative environment with social club access.'
+    level: 'B2+',
+    salary_range: '20,000 EGP Net + Uncapped Commission (starts at 6K)',
+    work_style: 'On-site',
+    shift: 'Fixed: 3:15 PM – 12:30 AM (Sat & Sun Off)',
+    location: '6th of October',
+    recruiter_commission: 1500,
+    cooling_period_days: 14,
+    description: 'Telesales Agent with high base net and return drop-off transport. No experience needed.'
+  },
+  {
+    id: 'cf1a2398-3e30-492d-9996-43204ed06304',
+    title: 'Telesales Agent (US Account)',
+    company_name: 'TTC',
+    language: 'English',
+    level: 'B2+/C1',
+    salary_range: '12,000 EGP Net + Unlimited Commissions + KPIs',
+    work_style: 'On-site',
+    shift: 'Fixed: 3:00 PM – 11:00 PM (Sat & Sun Off)',
+    location: 'Nasr City (Makram Ebeid)',
+    recruiter_commission: 1200,
+    cooling_period_days: 36,
+    description: 'Telesales for US Account with return transport provided. All grad statuses welcome.'
+  },
+  {
+    id: '7eb59b60-f028-4c99-ae5e-6ef51a62813d',
+    title: 'Debt Settlement Sales Specialist',
+    company_name: 'Geeky CX',
+    language: 'English',
+    level: 'B2+/C1',
+    salary_range: '15,000 - 20,000 Base + 2K Transport + USD Comm',
+    work_style: 'On-site',
+    shift: 'Fixed: 5:00 PM – 2:00 AM',
+    location: 'Sheikh Zayed',
+    recruiter_commission: 1600,
+    cooling_period_days: 30,
+    description: 'High-ticket US debt settlement sales with uncapped dollar commission.'
+  },
+  {
+    id: '2daf70ef-a2f6-4b7f-884c-efc30ae0b4ed',
+    title: 'Bilingual Customer Service Agent (Spanish & English)',
+    company_name: 'Geeky CX',
+    language: 'Spanish',
+    level: 'Spanish B2+/C1 & English B2+',
+    salary_range: '28,000 Base + 2K Transport + $100 USD KPI',
+    work_style: 'On-site',
+    shift: 'Fixed: 7:00 PM – 4:00 AM',
+    location: 'Sheikh Zayed',
+    recruiter_commission: 2500,
+    cooling_period_days: 30,
+    description: 'Bilingual Spanish and English support role with transport allowance.'
+  },
+  {
+    id: '7746b5cd-7f37-4343-a77c-2d47a111b35d',
+    title: 'Dutch Sales Representative',
+    company_name: 'TTEC',
+    language: 'Dutch',
+    level: 'Dutch B2+ & English B2',
+    salary_range: '64,000 EGP Gross + Commissions + Paid Training',
+    work_style: 'On-site',
+    shift: 'Rotational 9-Hr (24/7)',
+    location: 'Maadi Tech Park',
+    recruiter_commission: 4000,
+    cooling_period_days: 30,
+    description: 'Premier European sales role in Maadi Tech Park. Highest gross compensation in Egypt.'
+  },
+  {
+    id: 'e31b6e03-0a3f-4d49-bbd9-133560315783',
+    title: 'Portuguese Sales Representative',
+    company_name: 'TTEC',
+    language: 'Portuguese',
+    level: 'Portuguese B2+ & English B2',
+    salary_range: '42,200 EGP Gross + Commissions + Paid Training',
+    work_style: 'On-site',
+    shift: 'Rotational 9-Hr (24/7)',
+    location: 'Maadi Tech Park',
+    recruiter_commission: 3000,
+    cooling_period_days: 30,
+    description: 'Enterprise Portuguese sales advisory in Maadi Tech Park. Transport provided.'
+  },
+  {
+    id: '3f17e97b-4937-4b9a-b888-11a8abc491a7',
+    title: 'French Sales Representative',
+    company_name: 'TTEC',
+    language: 'French',
+    level: 'French B2+ & English B2',
+    salary_range: '33,500 EGP Gross + Commissions + Paid Training',
+    work_style: 'On-site',
+    shift: 'Rotational 9-Hr (24/7)',
+    location: 'Maadi Tech Park',
+    recruiter_commission: 2500,
+    cooling_period_days: 30,
+    description: 'French BPO outbound and inbound solutions with door-to-door transport for females.'
+  },
+  {
+    id: '4a0ab1d2-1e80-47b6-9603-9a54480262c8',
+    title: 'Call Center Agent',
+    company_name: 'Teleperformance',
+    language: 'English',
+    level: 'B2+',
+    salary_range: '18,000 – 19,000 EGP Net + Paid Training + Gym Access',
+    work_style: 'On-site',
+    shift: 'Rotational 9-Hr',
+    location: 'New Cairo',
+    recruiter_commission: 1500,
+    cooling_period_days: 30,
+    description: 'Leading global BPO in New Cairo with gym access, paid training, and door-to-door shuttles.'
+  },
+  {
+    id: '8876c720-281c-49fd-ba8d-caf12ba06e66',
+    title: 'Business Travel Consultant (Aviation BPO)',
+    company_name: 'VX Alex',
+    language: 'English',
+    level: 'C1',
+    salary_range: '13,000 Base + Uncapped USD Commissions (Avg $700+/mo)',
+    work_style: 'Hybrid',
+    shift: 'Fixed: 5:00 PM – 2:00 AM',
+    location: 'Alexandria',
+    recruiter_commission: 1500,
+    cooling_period_days: 30,
+    description: 'Aviation booking consultancy in Alexandria. WFH eligibility after 90 days.'
+  },
+  {
+    id: '2269df35-576c-4d6b-9c6f-0f43f4d2334a',
+    title: 'Telesales Agent (Canadian Account)',
+    company_name: 'LeadBull',
+    language: 'English',
+    level: 'B2+',
+    salary_range: '15,000 EGP Net + 5K KPIs + Spiffs',
+    work_style: 'Hybrid',
+    shift: 'Fixed: 4:00 PM – 1:00 AM',
+    location: 'Zahraa El Maadi',
+    recruiter_commission: 1500,
+    cooling_period_days: 30,
+    description: 'Canadian outbound campaign in Zahraa El Maadi. WFH available after 3 months.'
   }
 ];
 
@@ -103,17 +182,22 @@ const FAQS = [
   {
     category: 'candidates',
     q: 'Are there any recruitment fees or application charges for candidates?',
-    a: 'Absolutely zero. ACE Agency is funded entirely by our corporate hiring partners. Candidates never pay a single cent at any stage of the recruitment, audition, or placement process.'
+    a: 'Absolutely zero. ACE Agency is funded entirely by our corporate hiring partners (LPM, TTEC, Teleperformance, Geeky CX, etc.). Candidates never pay a single cent at any stage.'
   },
   {
     category: 'candidates',
     q: 'How does the 45-second Vocaroo voice audition work?',
-    a: 'Instead of waiting weeks for resume screening, candidates record a simple 45-60 second English or foreign language introduction on Vocaroo.com and paste the link into the application. Our recruitment coordinators listen directly and schedule WhatsApp fast-track interviews within 24–48 hours.'
+    a: 'Instead of waiting weeks for resume screening, candidates record a simple 45-60 second English or foreign language introduction on Vocaroo.com and paste the link into the application. Our recruitment coordinators evaluate it directly and schedule WhatsApp fast-track interviews within 24–48 hours.'
   },
   {
     category: 'candidates',
     q: 'Can fresh graduates and undergraduates apply for multilingual positions?',
-    a: 'Yes! Several of our top corporate vacancies accept high-proficiency undergraduates and fresh graduates with solid B2, C1, or fluent conversational skills. Language mastery is prioritized over corporate tenure.'
+    a: 'Yes! Vacancies at LPM, TTC, Total Trip Planners, Crystal Reach, and LeadBull openly accept undergraduates, gap-year students, and fresh graduates. Language proficiency (B2/C1) is prioritized.'
+  },
+  {
+    category: 'candidates',
+    q: 'How do I track my interview schedule and application status?',
+    a: 'Upon submitting your application, you receive a unique Application Reference Code (e.g. ACE-XXXXXX). Visit our Track Status portal anytime with your phone number and reference code to see live interview appointments and coordinator WhatsApp contacts.'
   },
   {
     category: 'recruiters',
@@ -128,21 +212,55 @@ const FAQS = [
   {
     category: 'recruiters',
     q: 'When are commission payouts released from the cooling period?',
-    a: 'Commissions enter a standard 30-day corporate cooling timer upon candidate start date to verify probation stability. As soon as the automated timer concludes, funds unlock to your withdrawable wallet with instant payout records.'
+    a: 'Commissions enter a designated cooling timer (14, 21, 30, or 36 days based on the specific account) upon candidate start date to verify probation stability. As soon as the automated timer concludes, funds unlock to your withdrawable wallet with instant payout records.'
   }
 ];
 
 export default function HomePage() {
+  const [offers, setOffers] = useState<any[]>(FALLBACK_BPO_OFFERS);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'candidates' | 'recruiters'>('candidates');
   const [placedCount, setPlacedCount] = useState<number>(4);
   const [commissionTier, setCommissionTier] = useState<number>(4500);
   const [faqCategory, setFaqCategory] = useState<'all' | 'candidates' | 'recruiters'>('all');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
-  const filteredVacancies = selectedLanguage === 'All'
-    ? FEATURED_VACANCIES
-    : FEATURED_VACANCIES.filter(v => v.language.toLowerCase() === selectedLanguage.toLowerCase());
+  useEffect(() => {
+    async function loadLiveOffers() {
+      try {
+        const supabase = createBrowserClient();
+        const { data, error } = await supabase
+          .from('offers')
+          .select('id, title, company_name, language, level, salary_range, work_style, location, shift, recruiter_commission, cooling_period_days, description')
+          .eq('status', 'active')
+          .order('company_name');
+
+        if (data && data.length > 0) {
+          setOffers(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch live offers, using fallback BPO accounts', err);
+      }
+    }
+
+    loadLiveOffers();
+  }, []);
+
+  // Filter offers by language and search query
+  const filteredOffers = offers.filter((o) => {
+    const matchesLang =
+      selectedLanguage === 'All' ||
+      o.language.toLowerCase().includes(selectedLanguage.toLowerCase());
+
+    const matchesSearch =
+      !searchQuery.trim() ||
+      o.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      o.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (o.location && o.location.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesLang && matchesSearch;
+  });
 
   // Calculations for interactive earnings slider
   const totalCommission = placedCount * commissionTier;
@@ -164,9 +282,9 @@ export default function HomePage() {
           <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full glass-panel-gold text-amber-300 text-xs font-bold tracking-wide mb-8 animate-pulse-subtle">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span className="w-2 h-2 rounded-full bg-emerald-400 -ml-4" />
-            <span>ACE RECRUITMENT AGENCY & COMMISSION ENGINE</span>
+            <span>ACE RECRUITMENT AGENCY &bull; EGYPTIAN BPO PORTAL</span>
             <span className="hidden sm:inline text-slate-500">•</span>
-            <span className="hidden sm:inline text-amber-200/90 font-medium">14 Active Vacancies Available Today</span>
+            <span className="hidden sm:inline text-amber-200/90 font-medium">20 Active BPO Vacancies Available</span>
           </div>
 
           {/* Main Headline */}
@@ -179,31 +297,31 @@ export default function HomePage() {
 
           {/* Supporting Copy */}
           <p className="mt-6 text-base sm:text-xl text-slate-300 max-w-3xl leading-relaxed">
-            Connecting premier multinational BPO hubs with top German, Italian, French, and English talent. Built with zero-storage voice auditions, 30-day referral attribution, and automated cooling-period commission releases.
+            Direct fast-track recruitment for Egypt’s premier BPO conglomerates: LPM, TTEC, Teleperformance, Geeky CX, eClerx, Alorica, and Cxperts. Featuring zero-storage voice auditions, 30-day affiliate cookie locks, and live candidate tracking.
           </p>
 
           {/* Primary Action Buttons */}
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full sm:w-auto">
             <Link
               href="/apply"
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-sm bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 hover:from-amber-400 hover:to-amber-300 shadow-xl shadow-amber-500/25 active:scale-95 transition-all flex items-center justify-center gap-2.5 cursor-pointer group"
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-xs sm:text-sm bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 hover:from-amber-400 hover:to-amber-300 shadow-xl shadow-amber-500/25 active:scale-95 transition-all flex items-center justify-center gap-2.5 cursor-pointer group"
             >
               <Send className="w-4 h-4 text-slate-950 group-hover:translate-x-0.5 transition-transform" />
               Apply as a Candidate
               <ArrowRight className="w-4 h-4 text-slate-950 group-hover:translate-x-1 transition-transform" />
             </Link>
 
-            <a
-              href="#vacancies"
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-sm glass-panel text-slate-200 hover:text-white hover:bg-slate-800/80 border border-slate-700/80 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            <Link
+              href="/track"
+              className="w-full sm:w-auto px-6 py-4 rounded-2xl font-bold text-xs sm:text-sm glass-panel text-amber-300 hover:text-white hover:bg-slate-800/80 border border-amber-500/30 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Briefcase className="w-4 h-4 text-amber-400" />
-              Explore Open Vacancies
-            </a>
+              <Search className="w-4 h-4 text-amber-400" />
+              Track Application Status
+            </Link>
 
             <Link
               href="/login"
-              className="w-full sm:w-auto px-6 py-4 rounded-2xl font-bold text-sm bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto px-6 py-4 rounded-2xl font-bold text-xs sm:text-sm bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <Lock className="w-4 h-4 text-blue-400" />
               Recruiter & Partner Hub
@@ -244,7 +362,7 @@ export default function HomePage() {
                     <CheckCircle2 className="w-3.5 h-3.5" /> B2+ Verified
                   </span>
                 </div>
-                <p className="text-sm font-bold text-white">Youssef T. — German Account Specialist</p>
+                <p className="text-sm font-bold text-white">Youssef T. — LPM Telesales Agent</p>
                 <div className="flex items-center gap-1.5 pt-1">
                   <div className="flex items-center gap-0.5 h-4 text-amber-400">
                     <span className="w-1 bg-amber-400 rounded-full wave-bar-1" />
@@ -266,8 +384,8 @@ export default function HomePage() {
                 </div>
                 <p className="text-sm font-bold text-white">Ref: ACE-REC-8921</p>
                 <div className="text-[11px] text-slate-400 flex items-center justify-between">
-                  <span>Recruiter: Sarah M.</span>
-                  <span className="text-emerald-400 font-bold">+5,000 EGP Pending</span>
+                  <span>Recruiter: Omar M.</span>
+                  <span className="text-emerald-400 font-bold">+1,500 EGP Pending</span>
                 </div>
               </div>
 
@@ -275,11 +393,11 @@ export default function HomePage() {
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-400 font-medium">Cooling Period Release</span>
                   <span className="text-blue-400 font-semibold flex items-center gap-1">
-                    <TrendingUp className="w-3.5 h-3.5" /> Day 18 / 30
+                    <TrendingUp className="w-3.5 h-3.5" /> 14 Days (LPM)
                   </span>
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden mt-1">
-                  <div className="bg-gradient-to-r from-amber-400 to-emerald-400 h-2 rounded-full w-[60%]" />
+                  <div className="bg-gradient-to-r from-amber-400 to-emerald-400 h-2 rounded-full w-[70%]" />
                 </div>
                 <p className="text-[11px] text-slate-400 pt-0.5">Automated release unlocks upon probation maturity</p>
               </div>
@@ -293,10 +411,10 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-center">
           <div className="space-y-1">
             <span className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-200">
-              $1.4M+
+              20
             </span>
-            <p className="text-xs sm:text-sm font-semibold text-slate-300">Commissions Paid</p>
-            <p className="text-[11px] text-slate-400">Zero commission delays</p>
+            <p className="text-xs sm:text-sm font-semibold text-slate-300">Live Egyptian BPO Offers</p>
+            <p className="text-[11px] text-slate-400">LPM, TTEC, TP, Geeky CX, eClerx</p>
           </div>
           <div className="space-y-1">
             <span className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
@@ -322,25 +440,25 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Opportunities Section */}
+      {/* Featured 20 BPO Opportunities Section */}
       <section id="vacancies" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold mb-3">
               <Sparkles className="w-3.5 h-3.5" />
-              HOT HIRING OPENINGS
+              HOT EGYPTIAN BPO VACANCIES
             </div>
             <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              Curated High-Value Vacancies
+              Explore 20 Verified Corporate Openings
             </h2>
             <p className="text-sm text-slate-400 mt-2 max-w-xl">
-              Competitive salary packages, work-from-home options, and corporate benefits with top international employers.
+              Verified salary packages, door-to-door transport, night shift allowances, and fast-track interview scheduling.
             </p>
           </div>
 
           {/* Language Filter Tabs */}
           <div className="flex items-center gap-1.5 p-1.5 rounded-xl glass-panel border border-slate-800 self-start md:self-auto overflow-x-auto">
-            {['All', 'German', 'Italian', 'French', 'English'].map((lang) => (
+            {['All', 'English', 'Dutch', 'Portuguese', 'French', 'Spanish'].map((lang) => (
               <button
                 key={lang}
                 onClick={() => setSelectedLanguage(lang)}
@@ -356,85 +474,109 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Search Bar */}
+        <div className="mb-8 relative max-w-md">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by company (LPM, TTEC, Geeky CX...), title, or location..."
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+          />
+        </div>
+
         {/* Vacancy Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredVacancies.map((vacancy) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredOffers.map((vacancy) => (
             <div
               key={vacancy.id}
-              className="glass-panel rounded-3xl p-6 sm:p-7 border border-slate-800 card-hover-effect flex flex-col justify-between relative overflow-hidden group"
+              className="glass-panel rounded-3xl p-6 border border-slate-800 card-hover-effect flex flex-col justify-between relative overflow-hidden group"
             >
               {/* Subtle accent corner glow */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 group-hover:bg-amber-500/15 rounded-bl-full transition-all duration-300 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-28 h-28 bg-amber-500/5 group-hover:bg-amber-500/15 rounded-bl-full transition-all duration-300 pointer-events-none" />
 
               <div>
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2.5 py-1 rounded-md text-xs font-black bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="px-2.5 py-0.5 rounded-md text-[11px] font-black bg-amber-500/15 text-amber-300 border border-amber-500/30">
                       {vacancy.language} &bull; {vacancy.level}
                     </span>
-                    {vacancy.badge && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                        {vacancy.badge}
-                      </span>
-                    )}
+                    <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      {vacancy.company_name}
+                    </span>
                   </div>
-                  <span className="text-xs font-bold text-emerald-400 font-mono">
-                    {vacancy.commission}
+                  <span className="text-xs font-bold text-emerald-400 font-mono shrink-0">
+                    {vacancy.recruiter_commission ? `${vacancy.recruiter_commission.toLocaleString()} EGP Payout` : ''}
                   </span>
                 </div>
 
-                <h3 className="text-xl font-bold text-white group-hover:text-amber-300 transition-colors">
+                <h3 className="text-base font-bold text-white group-hover:text-amber-300 transition-colors">
                   {vacancy.title}
                 </h3>
-                <p className="text-xs font-medium text-slate-400 mt-1 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                  {vacancy.company} &bull; <span className="text-slate-300">{vacancy.location}</span>
+                <p className="text-xs font-medium text-slate-400 mt-1 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="text-slate-300">{vacancy.location}</span>
                 </p>
 
-                <p className="text-xs text-slate-300 mt-4 leading-relaxed line-clamp-2">
+                <p className="text-xs text-slate-300 mt-3 leading-relaxed line-clamp-2">
                   {vacancy.description}
                 </p>
 
-                <div className="grid grid-cols-2 gap-3 mt-5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs">
-                  <div>
-                    <span className="text-[10px] uppercase text-slate-400 block font-semibold">Compensation</span>
-                    <span className="font-bold text-amber-400">{vacancy.salary}</span>
+                <div className="mt-4 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] uppercase text-slate-400 font-semibold">Salary:</span>
+                    <span className="font-bold text-amber-400 text-xs truncate max-w-[180px] text-right">{vacancy.salary_range}</span>
                   </div>
-                  <div>
-                    <span className="text-[10px] uppercase text-slate-400 block font-semibold">Work Setup</span>
-                    <span className="font-bold text-white">{vacancy.workStyle}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] uppercase text-slate-400 font-semibold">Setup:</span>
+                    <span className="font-semibold text-white text-xs">{vacancy.work_style}</span>
                   </div>
+                  {vacancy.cooling_period_days && (
+                    <div className="flex justify-between items-center text-[10px] text-slate-400 pt-0.5">
+                      <span>Cooling Timer:</span>
+                      <span className="font-mono text-blue-400">{vacancy.cooling_period_days} Days</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between gap-4">
+              <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-3">
                 <Link
-                  href="/apply"
-                  className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 hover:from-amber-400 hover:to-amber-500 shadow-md shadow-amber-500/15 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  href={`/apply/${vacancy.id}`}
+                  className="w-full py-2 px-3 rounded-xl font-bold text-xs bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 hover:from-amber-400 hover:to-amber-500 shadow-md shadow-amber-500/15 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5 text-slate-950" />
-                  Apply for this Role
+                  Fast-Track Apply
                 </Link>
                 <Link
                   href="/login"
-                  className="py-2.5 px-3.5 rounded-xl font-semibold text-xs text-slate-400 hover:text-white hover:bg-slate-800/70 border border-slate-800 transition-all flex items-center gap-1 shrink-0"
-                  title="Promote role as recruiter"
+                  className="py-2 px-3 rounded-xl font-semibold text-xs text-slate-400 hover:text-white hover:bg-slate-800/70 border border-slate-800 transition-all flex items-center gap-1 shrink-0"
+                  title="Recruiter affiliate link"
                 >
                   <Award className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="hidden sm:inline">Affiliate Link</span>
+                  <span className="hidden sm:inline">Affiliate</span>
                 </Link>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-8 text-center">
+        <div className="mt-10 text-center space-y-2">
           <Link
             href="/apply"
             className="inline-flex items-center gap-2 text-xs font-bold text-amber-400 hover:text-amber-300 underline underline-offset-4 cursor-pointer"
           >
-            Don't see your specific language or niche? Submit a General Fast-Track Application <ArrowRight className="w-3.5 h-3.5" />
+            Submit an open application for best matching vacancy <ArrowRight className="w-3.5 h-3.5" />
           </Link>
+          <div>
+            <Link
+              href="/track"
+              className="text-xs text-slate-400 hover:text-white inline-flex items-center gap-1"
+            >
+              Already submitted? Track your application status here <ArrowRight className="w-3 h-3 text-amber-400" />
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -515,10 +657,10 @@ export default function HomePage() {
               <span className="text-3xl font-black text-slate-700 block mb-3 font-mono">04</span>
               <h3 className="text-base font-bold text-white mb-2 flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                Guaranteed Placement
+                Live Status Tracker
               </h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Sign your official corporate offer, receive equipment, and step into high-growth multilingual careers with 100% free support.
+                Track your real-time milestone progress on /track with your phone and reference code anytime.
               </p>
             </div>
           </div>
@@ -621,9 +763,9 @@ export default function HomePage() {
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { label: 'English B2', val: 3000 },
-                    { label: 'French / Italian', val: 4500 },
-                    { label: 'German C1 VIP', val: 6500 }
+                    { label: 'Standard Telesales', val: 1500 },
+                    { label: 'French / Spanish', val: 2500 },
+                    { label: 'Dutch Executive', val: 4000 }
                   ].map((tier) => (
                     <button
                       key={tier.val}
@@ -798,7 +940,7 @@ export default function HomePage() {
           </div>
           <h2 className="text-3xl font-black text-white">Frequently Asked Questions</h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-2">
-            Everything you need to know about our candidate fast-track and recruiter commission model.
+            Everything you need to know about candidate fast-track applications and recruiter commission models.
           </p>
 
           <div className="flex items-center justify-center gap-2 mt-6">
@@ -874,11 +1016,11 @@ export default function HomePage() {
                 Submit Application Now
               </Link>
               <Link
-                href="/login"
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-xs glass-panel text-white hover:bg-slate-800 border border-slate-700 transition-all flex items-center justify-center gap-2"
+                href="/track"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-xs glass-panel text-amber-300 hover:text-white hover:bg-slate-800 border border-amber-500/30 transition-all flex items-center justify-center gap-2"
               >
-                <Lock className="w-4 h-4 text-amber-400" />
-                Recruiter Portal Access
+                <Search className="w-4 h-4 text-amber-400" />
+                Track Application
               </Link>
             </div>
           </div>
@@ -905,12 +1047,12 @@ export default function HomePage() {
           </div>
 
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200 mb-3">Opportunities</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200 mb-3">Top BPO Openings</h4>
             <ul className="space-y-2 text-xs text-slate-400">
-              <li><a href="#vacancies" className="hover:text-amber-400 transition-colors">German BPO Specialist</a></li>
-              <li><a href="#vacancies" className="hover:text-amber-400 transition-colors">Italian Customer Support</a></li>
-              <li><a href="#vacancies" className="hover:text-amber-400 transition-colors">French E-Commerce Roles</a></li>
-              <li><a href="#vacancies" className="hover:text-amber-400 transition-colors">English Technical Support</a></li>
+              <li><a href="#vacancies" className="hover:text-amber-400 transition-colors">LPM Telesales (20K Net)</a></li>
+              <li><a href="#vacancies" className="hover:text-amber-400 transition-colors">TTEC Dutch Sales (64K Gross)</a></li>
+              <li><a href="#vacancies" className="hover:text-amber-400 transition-colors">Geeky CX Debt Sales (20K Base + USD)</a></li>
+              <li><a href="#vacancies" className="hover:text-amber-400 transition-colors">Teleperformance English (19K Net)</a></li>
             </ul>
           </div>
 
@@ -918,9 +1060,9 @@ export default function HomePage() {
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200 mb-3">Portals & Hubs</h4>
             <ul className="space-y-2 text-xs text-slate-400">
               <li><Link href="/apply" className="hover:text-amber-400 transition-colors">Candidate Fast-Track Form</Link></li>
+              <li><Link href="/track" className="hover:text-amber-400 transition-colors">Candidate Status Tracker</Link></li>
               <li><Link href="/dashboard/recruiter" className="hover:text-amber-400 transition-colors">Recruiter Affiliate Portal</Link></li>
               <li><Link href="/dashboard/leader" className="hover:text-amber-400 transition-colors">Team Leader Supervisor Hub</Link></li>
-              <li><Link href="/dashboard/admin" className="hover:text-amber-400 transition-colors">Super Admin Operations</Link></li>
             </ul>
           </div>
 

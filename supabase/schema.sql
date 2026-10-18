@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS public.candidates (
   recruiter_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   team_leader_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   referral_code TEXT,         -- Captured ?ref=[referral_code] affiliate attribution
+  app_reference_code TEXT UNIQUE NOT NULL DEFAULT ('ACE-' || UPPER(SUBSTRING(MD5(RANDOM()::TEXT || CLOCK_TIMESTAMP()::TEXT) FROM 1 FOR 6))),
   full_name TEXT NOT NULL,
   email TEXT NOT NULL,
   phone TEXT NOT NULL,
@@ -145,6 +146,7 @@ CREATE INDEX IF NOT EXISTS idx_candidates_offer_id ON public.candidates(offer_id
 CREATE INDEX IF NOT EXISTS idx_candidates_recruiter_id ON public.candidates(recruiter_id);
 CREATE INDEX IF NOT EXISTS idx_candidates_team_leader_id ON public.candidates(team_leader_id);
 CREATE INDEX IF NOT EXISTS idx_candidates_referral_code ON public.candidates(referral_code);
+CREATE INDEX IF NOT EXISTS idx_candidates_ref_code ON public.candidates(app_reference_code);
 CREATE INDEX IF NOT EXISTS idx_candidates_status ON public.candidates(status);
 CREATE INDEX IF NOT EXISTS idx_candidates_phone ON public.candidates(phone);
 CREATE INDEX IF NOT EXISTS idx_candidates_whatsapp ON public.candidates(whatsapp);

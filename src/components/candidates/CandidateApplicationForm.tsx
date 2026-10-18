@@ -6,6 +6,7 @@ import { createBrowserClient } from '@/lib/supabase/client';
 import { captureReferralCode, getStoredReferralCode } from '@/lib/affiliate';
 import { VocarooPlayer } from '@/components/voice/VocarooPlayer';
 import type { Offer } from '@/lib/supabase/types';
+import Link from 'next/link';
 import { 
   Sparkles, 
   Send, 
@@ -22,7 +23,9 @@ import {
   Clock, 
   ExternalLink,
   ShieldCheck,
-  Check
+  Check,
+  Copy,
+  ArrowRight
 } from 'lucide-react';
 
 interface CandidateApplicationFormProps {
@@ -52,6 +55,8 @@ export function CandidateApplicationForm({ initialOfferId }: CandidateApplicatio
   // Status & Validation
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<string>('');
+  const [copiedCode, setCopiedCode] = useState(false);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -108,8 +113,6 @@ export function CandidateApplicationForm({ initialOfferId }: CandidateApplicatio
 
     try {
       // 1. Client-Side Pre-Flight Check for 60-day duplicate phone/whatsapp
-      const cleanPhone = phone.replace(/[^0-9]/g, '');
-      const cleanWhatsapp = (whatsapp || phone).replace(/[^0-9]/g, '');
       const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
 
       const { data: existingDuplicate } = await supabase
@@ -131,7 +134,7 @@ export function CandidateApplicationForm({ initialOfferId }: CandidateApplicatio
       // 2. Submit candidate application
       // Note: The database trigger 'trg_resolve_candidate_affiliate' automatically looks up
       // the recruiter_id and team_leader_id from 'referral_code' on insert!
-      const { error: insertError } = await supabase
+      const { data: insertedData, error: insertError } = await supabase
         .from('candidates')
         .insert({
           offer_id: selectedOfferId || null,
@@ -147,7 +150,9 @@ export function CandidateApplicationForm({ initialOfferId }: CandidateApplicatio
           voice_note_url: voiceNoteUrl || null,
           experience_years: Number(experienceYears),
           status: 'Applied',
-        });
+        })
+        .select('id')
+        .single();
 
       if (insertError) {
         if (insertError.message.includes('DUPLICATE_CANDIDATE_60_DAYS') || insertError.message.includes('60 days')) {
@@ -158,6 +163,11 @@ export function CandidateApplicationForm({ initialOfferId }: CandidateApplicatio
           return;
         }
         throw insertError;
+      }
+
+      if (insertedData) {
+        const ref = 'ACE-' + insertedData.id.replace(/-/g, '').slice(0, 6).toUpperCase();
+        setGeneratedCode(ref);
       }
 
       setSubmitted(true);
@@ -182,6 +192,38 @@ export function CandidateApplicationForm({ initialOfferId }: CandidateApplicatio
           Thank you, <strong className="text-amber-400">{fullName}</strong>! Your application for{' '}
           <strong className="text-white">{offer?.title || 'Selected Opportunity'}</strong> has been registered successfully with ACE Recruitment Agency.
         </p>
+
+        {/* Generated Reference Code Badge */}
+        {generatedCode && (
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between mb-6">
+            <div className="text-left">
+              <span className="text-[10px] uppercase font-bold text-amber-400 block">Your Application Reference Code</span>
+              <span className="text-xl font-black font-mono text-white tracking-wide">{generatedCode}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(generatedCode);
+                setCopiedCode(true);
+                setTimeout(() => setCopiedCode(false), 2000);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
+            >
+              {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedCode ? 'Copied!' : 'Copy Code'}
+            </button>
+          </div>
+        )}
+
+        {/* 1-Click Track Status Button */}
+        {generatedCode && (
+          <Link
+            href={`/track?phone=${encodeURIComponent(phone)}&code=${encodeURIComponent(generatedCode)}`}
+            className="w-full py-3.5 px-4 rounded-xl font-bold text-xs bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 hover:from-amber-400 hover:to-amber-300 shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 mb-6 cursor-pointer transition-all"
+          >
+            Track Application Status Now <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        )}
 
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 text-left text-xs text-slate-400 space-y-2 mb-6">
           <div className="flex items-center justify-between text-white font-semibold">
@@ -211,6 +253,7 @@ export function CandidateApplicationForm({ initialOfferId }: CandidateApplicatio
             setPhone('');
             setWhatsapp('');
             setVoiceNoteUrl('');
+            setGeneratedCode('');
           }}
           className="text-xs text-amber-400 hover:text-amber-300 underline font-medium cursor-pointer"
         >

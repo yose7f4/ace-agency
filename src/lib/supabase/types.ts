@@ -175,6 +175,7 @@ export interface Database {
           recruiter_id: string | null;
           team_leader_id: string | null;
           referral_code: string | null;
+          app_reference_code: string;
           full_name: string;
           email: string;
           phone: string;
@@ -202,6 +203,7 @@ export interface Database {
           recruiter_id?: string | null;
           team_leader_id?: string | null;
           referral_code?: string | null;
+          app_reference_code?: string;
           full_name: string;
           email: string;
           phone: string;
@@ -229,6 +231,7 @@ export interface Database {
           recruiter_id?: string | null;
           team_leader_id?: string | null;
           referral_code?: string | null;
+          app_reference_code?: string;
           full_name?: string;
           email?: string;
           phone?: string;

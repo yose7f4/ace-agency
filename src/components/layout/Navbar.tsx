@@ -18,7 +18,8 @@ import {
   Send,
   Calculator,
   Compass,
-  ArrowRight
+  ArrowRight,
+  Search
 } from 'lucide-react';
 
 function NavbarNavigation() {
@@ -168,13 +169,20 @@ function NavbarNavigation() {
   }
 
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center gap-2">
+      <Link
+        href="/track"
+        className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all"
+      >
+        <Search className="w-3.5 h-3.5 text-amber-400" />
+        Track Status
+      </Link>
       <Link
         href="/apply"
-        className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all"
+        className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all"
       >
         <Send className="w-3.5 h-3.5" />
-        Candidate Apply
+        Apply
       </Link>
       <Link
         href="/login"
@@ -274,6 +282,14 @@ export function Navbar() {
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-slate-800/80 bg-[#070a12]/95 px-4 pt-3 pb-5 space-y-2 text-sm font-medium animate-in slide-in-from-top-2 duration-200">
+          <Link
+            href="/track"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60"
+          >
+            <Search className="w-4 h-4 text-amber-400" />
+            Track Application Status
+          </Link>
           <a
             href="#vacancies"
             onClick={() => setMobileMenuOpen(false)}
