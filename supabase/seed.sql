@@ -5,6 +5,17 @@
 -- ==============================================================================
 
 -- ------------------------------------------------------------------------------
+-- 0. Ensure Required Columns Exist (Safe Idempotent Guard)
+-- ------------------------------------------------------------------------------
+ALTER TABLE public.offers ADD COLUMN IF NOT EXISTS age_range TEXT NOT NULL DEFAULT '18-45';
+ALTER TABLE public.offers ADD COLUMN IF NOT EXISTS nationality TEXT NOT NULL DEFAULT 'Egyptians & Foreigners';
+ALTER TABLE public.offers ADD COLUMN IF NOT EXISTS experience_required BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE public.offers ADD COLUMN IF NOT EXISTS minimized_post TEXT;
+ALTER TABLE public.offers ADD COLUMN IF NOT EXISTS minimized_description TEXT;
+ALTER TABLE public.offers ADD COLUMN IF NOT EXISTS transport TEXT NOT NULL DEFAULT 'Provided';
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS app_reference_code TEXT UNIQUE NOT NULL DEFAULT ('ACE-' || UPPER(SUBSTRING(MD5(RANDOM()::TEXT || CLOCK_TIMESTAMP()::TEXT) FROM 1 FOR 6)));
+
+-- ------------------------------------------------------------------------------
 -- 1. Ensure Profiles Link Test Hierarchy (Omar Recruiter -> Ahmed Team Leader)
 -- ------------------------------------------------------------------------------
 UPDATE public.profiles

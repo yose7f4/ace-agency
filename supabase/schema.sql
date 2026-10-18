@@ -483,6 +483,7 @@ ALTER TABLE public.candidates ENABLE ROW LEVEL SECURITY;
 -- ------------------------------------------------------------------------------
 
 -- Super Admin: Full CRUD access to all profiles
+DROP POLICY IF EXISTS "Admin full access on profiles" ON public.profiles;
 CREATE POLICY "Admin full access on profiles"
   ON public.profiles
   FOR ALL
@@ -491,6 +492,7 @@ CREATE POLICY "Admin full access on profiles"
   WITH CHECK (public.is_admin());
 
 -- Users can view their own profile
+DROP POLICY IF EXISTS "Users view own profile" ON public.profiles;
 CREATE POLICY "Users view own profile"
   ON public.profiles
   FOR SELECT
@@ -498,6 +500,7 @@ CREATE POLICY "Users view own profile"
   USING (id = auth.uid());
 
 -- Team Leaders: Can view recruiters assigned to their team (profiles.team_leader_id == current_user.id)
+DROP POLICY IF EXISTS "Team Leader view assigned recruiters" ON public.profiles;
 CREATE POLICY "Team Leader view assigned recruiters"
   ON public.profiles
   FOR SELECT
@@ -507,6 +510,7 @@ CREATE POLICY "Team Leader view assigned recruiters"
   );
 
 -- Users can update their own personal profile
+DROP POLICY IF EXISTS "Users update own profile" ON public.profiles;
 CREATE POLICY "Users update own profile"
   ON public.profiles
   FOR UPDATE
@@ -519,6 +523,7 @@ CREATE POLICY "Users update own profile"
   );
 
 -- Public / Anonymous: Can view active profiles' referral_code and name for affiliate attribution
+DROP POLICY IF EXISTS "Public view active referral codes" ON public.profiles;
 CREATE POLICY "Public view active referral codes"
   ON public.profiles
   FOR SELECT
@@ -530,6 +535,7 @@ CREATE POLICY "Public view active referral codes"
 -- ------------------------------------------------------------------------------
 
 -- Super Admin: Full CRUD access to all offers
+DROP POLICY IF EXISTS "Admin full access on offers" ON public.offers;
 CREATE POLICY "Admin full access on offers"
   ON public.offers
   FOR ALL
@@ -538,6 +544,7 @@ CREATE POLICY "Admin full access on offers"
   WITH CHECK (public.is_admin());
 
 -- Team Leaders & Recruiters: Can browse active offers
+DROP POLICY IF EXISTS "Recruiters and Leaders view active offers" ON public.offers;
 CREATE POLICY "Recruiters and Leaders view active offers"
   ON public.offers
   FOR SELECT
@@ -545,6 +552,7 @@ CREATE POLICY "Recruiters and Leaders view active offers"
   USING (status = 'active' OR public.is_admin());
 
 -- Public Candidates (anon): Can view active offers for applying
+DROP POLICY IF EXISTS "Public view active offers" ON public.offers;
 CREATE POLICY "Public view active offers"
   ON public.offers
   FOR SELECT
@@ -556,6 +564,7 @@ CREATE POLICY "Public view active offers"
 -- ------------------------------------------------------------------------------
 
 -- Super Admin: Full CRUD access to all candidates
+DROP POLICY IF EXISTS "Admin full access on candidates" ON public.candidates;
 CREATE POLICY "Admin full access on candidates"
   ON public.candidates
   FOR ALL
@@ -565,6 +574,7 @@ CREATE POLICY "Admin full access on candidates"
 
 -- Team Leader: STRICT ISOLATION
 -- Can ONLY see Candidates where candidates.team_leader_id == current_user.id
+DROP POLICY IF EXISTS "Team Leader select team candidates" ON public.candidates;
 CREATE POLICY "Team Leader select team candidates"
   ON public.candidates
   FOR SELECT
@@ -574,6 +584,7 @@ CREATE POLICY "Team Leader select team candidates"
   );
 
 -- Team Leader: Update team candidates (status, interview, notes, batch start date)
+DROP POLICY IF EXISTS "Team Leader update team candidates" ON public.candidates;
 CREATE POLICY "Team Leader update team candidates"
   ON public.candidates
   FOR UPDATE
@@ -587,6 +598,7 @@ CREATE POLICY "Team Leader update team candidates"
 
 -- Recruiter: STRICT ISOLATION
 -- Can ONLY see Candidates where candidates.recruiter_id == current_user.id
+DROP POLICY IF EXISTS "Recruiter select own candidates" ON public.candidates;
 CREATE POLICY "Recruiter select own candidates"
   ON public.candidates
   FOR SELECT
@@ -596,6 +608,7 @@ CREATE POLICY "Recruiter select own candidates"
   );
 
 -- Recruiter: Can add candidate under their own recruiter_id
+DROP POLICY IF EXISTS "Recruiter insert own candidates" ON public.candidates;
 CREATE POLICY "Recruiter insert own candidates"
   ON public.candidates
   FOR INSERT
@@ -606,6 +619,7 @@ CREATE POLICY "Recruiter insert own candidates"
 
 -- Public Candidates (Unauthenticated): Can submit application
 -- Cannot see internal recruiter notes, agency codes, or commission numbers
+DROP POLICY IF EXISTS "Public candidates submit application" ON public.candidates;
 CREATE POLICY "Public candidates submit application"
   ON public.candidates
   FOR INSERT
