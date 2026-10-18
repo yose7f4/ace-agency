@@ -8,6 +8,11 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ==============================================================================
+-- 0. CLEAN RECREATION (Avoids column drift and conflicts upon re-running)
+-- ==============================================================================
+DROP TABLE IF EXISTS public.candidates, public.offers CASCADE;
+
+-- ==============================================================================
 -- 1. ENUMS & TYPES
 -- ==============================================================================
 
@@ -78,12 +83,16 @@ CREATE TABLE IF NOT EXISTS public.offers (
   level TEXT NOT NULL DEFAULT 'B2',          -- 'B1', 'B2', 'C1', 'Fluent', etc.
   shift TEXT NOT NULL DEFAULT 'Day Shift',    -- 'Day Shift', 'Night Shift', 'Rotational', '24/7'
   transport TEXT NOT NULL DEFAULT 'Provided',-- 'Provided', 'Allowance', 'None'
+  age_range TEXT NOT NULL DEFAULT '18-45',
   min_age INTEGER NOT NULL DEFAULT 18,
   max_age INTEGER NOT NULL DEFAULT 45,
   grad_status TEXT NOT NULL DEFAULT 'Graduates & Undergrads', -- 'Graduates Only', 'Graduates & Undergrads', 'Any'
+  nationality TEXT NOT NULL DEFAULT 'Egyptians & Foreigners',
+  experience_required BOOLEAN NOT NULL DEFAULT false,
   salary_range TEXT,
-  description TEXT NOT NULL,
+  description TEXT,
   minimized_description TEXT, -- Formatted for "Copy Minimized Offer + My Affiliate Link"
+  minimized_post TEXT,        -- Alias for minimized_description
   requirements TEXT,
   benefits TEXT,
   cooling_period_days INTEGER NOT NULL DEFAULT 30 CHECK (cooling_period_days >= 0),
@@ -120,6 +129,9 @@ CREATE TABLE IF NOT EXISTS public.candidates (
   cv_url TEXT,                -- Optional portfolio/CV link
   experience_years INTEGER NOT NULL DEFAULT 0 CHECK (experience_years >= 0),
   english_level TEXT,         -- 'B1', 'B2', 'C1', 'C2', 'Fluent', etc.
+  military_status TEXT,
+  call_center_experience TEXT,
+  bpo_experience TEXT,
   status candidate_status NOT NULL DEFAULT 'Applied',
   interview_date TIMESTAMPTZ, -- Scheduled interview timestamp
   batch_start_date DATE,      -- When candidate begins onboarding/batch
@@ -620,12 +632,16 @@ SELECT
   level,
   shift,
   transport,
+  age_range,
   min_age,
   max_age,
   grad_status,
+  nationality,
+  experience_required,
   salary_range,
   description,
   minimized_description,
+  minimized_post,
   requirements,
   benefits,
   cooling_period_days,

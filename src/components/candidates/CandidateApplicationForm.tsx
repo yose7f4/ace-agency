@@ -151,7 +151,7 @@ export function CandidateApplicationForm({ initialOfferId }: CandidateApplicatio
           experience_years: Number(experienceYears),
           status: 'Applied',
         })
-        .select('id')
+        .select('id, app_reference_code')
         .single();
 
       if (insertError) {
@@ -166,7 +166,7 @@ export function CandidateApplicationForm({ initialOfferId }: CandidateApplicatio
       }
 
       if (insertedData) {
-        const ref = 'ACE-' + insertedData.id.replace(/-/g, '').slice(0, 6).toUpperCase();
+        const ref = insertedData.app_reference_code || ('ACE-' + insertedData.id.replace(/-/g, '').slice(0, 6).toUpperCase());
         setGeneratedCode(ref);
       }
 

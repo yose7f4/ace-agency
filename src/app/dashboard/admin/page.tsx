@@ -163,7 +163,7 @@ export default function AdminDashboardPage() {
     setCoolingPeriodDays(offer.cooling_period_days);
     setAgencyCode(offer.agency_code || '');
     setInternalNotes(offer.internal_notes || '');
-    setDescription(offer.description);
+    setDescription(offer.description || '');
     setMinimizedDescription(offer.minimized_description || '');
     setIsFormOpen(true);
   };
