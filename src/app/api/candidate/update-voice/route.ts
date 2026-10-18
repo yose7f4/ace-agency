@@ -32,16 +32,26 @@ export async function POST(request: NextRequest) {
     // Verify candidate
     const { data: candidates, error: findError } = await supabase
       .from('candidates')
-      .select('id, full_name')
-      .or(`phone.eq.${localPhone},phone.eq.${intlPhone},phone.eq.${cleanPhone}`)
-      .ilike('id', `${cleanCode}%`)
-      .limit(1);
+      .select('id, full_name, app_reference_code')
+      .or(`phone.eq.${localPhone},phone.eq.${intlPhone},phone.eq.${cleanPhone}`);
 
     if (findError || !candidates || candidates.length === 0) {
       return NextResponse.json({ error: 'Candidate verification failed.' }, { status: 404 });
     }
 
-    const candidateId = candidates[0].id;
+    const matchedCandidate = candidates.find(c => {
+      const cleanId = c.id ? c.id.replace(/-/g, '').toLowerCase() : '';
+      const matchesPrefix = cleanId.startsWith(cleanCode);
+      const matchesAppRef = (c as any).app_reference_code && 
+        (c as any).app_reference_code.trim().toUpperCase() === referenceCode.trim().toUpperCase();
+      return matchesPrefix || matchesAppRef;
+    });
+
+    if (!matchedCandidate) {
+      return NextResponse.json({ error: 'Candidate verification failed.' }, { status: 404 });
+    }
+
+    const candidateId = matchedCandidate.id;
 
     // Update voice note URL
     const { error: updateError } = await supabase

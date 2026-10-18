@@ -42,9 +42,7 @@ export async function POST(request: NextRequest) {
         recruiter_id
       `)
       .or(`phone.eq.${localPhone},phone.eq.${intlPhone},phone.eq.${cleanPhone},whatsapp.eq.${localPhone},whatsapp.eq.${intlPhone}`)
-      .ilike('id', `${cleanCode}%`)
-      .order('created_at', { ascending: false })
-      .limit(1);
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching candidate tracking data:', error);
@@ -58,7 +56,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const candidate = candidates[0];
+    // Match candidate by Reference Code (matches id prefix or app_reference_code)
+    const candidate = candidates.find(c => {
+      const cleanId = c.id ? c.id.replace(/-/g, '').toLowerCase() : '';
+      const matchesPrefix = cleanId.startsWith(cleanCode);
+      const matchesAppRef = (c as any).app_reference_code && 
+        (c as any).app_reference_code.trim().toUpperCase() === referenceCode.trim().toUpperCase();
+      return matchesPrefix || matchesAppRef;
+    });
+
+    if (!candidate) {
+      return NextResponse.json(
+        { error: 'No matching application found. Please verify your phone number and Reference Code.' },
+        { status: 404 }
+      );
+    }
 
     // Fetch Offer details if attached
     let offer = null;
