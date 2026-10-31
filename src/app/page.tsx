@@ -142,48 +142,24 @@ export default function HomePage() {
         const { data, error } = await supabase
           .from('offers')
           .select('*')
-          .eq('status', 'active')
+          .in('status', ['active', 'hold'])
           .order('company_name');
 
         if (data && data.length > 0) {
-          const mapped: SheetOffer[] = data.map((item) => {
-            const match = SHEET_OFFERS.find(s => s.id === item.id || s.title.toLowerCase() === item.title.toLowerCase());
-            if (match) return match;
-            return {
-              id: item.id,
-              slug: item.id,
-              company_name: item.company_name,
-              company_full: item.company_name,
-              title: item.title,
-              status: item.status === 'hold' ? 'On Hold' : 'Active',
-              location: item.location,
-              location_category: 'other',
-              work_style: item.work_style,
-              grad_status_raw: item.grad_status || 'Any',
-              grad_label: item.grad_status || 'Grads & Undergrads',
-              allows_undergrads: (item.grad_status || '').toLowerCase().includes('undergrad'),
-              allows_dropouts: (item.grad_status || '').toLowerCase().includes('drop'),
-              graduates_only: (item.grad_status || '').toLowerCase().includes('only'),
-              languages: [item.language],
-              primary_language: item.language,
-              level: item.level,
-              language_raw: `${item.language} ${item.level}`,
-              experience_raw: item.experience_required ? 'Experience required' : 'No experience needed',
-              experience_category: item.experience_required ? 'experienced' : 'fresh',
-              min_age: String(item.min_age || 18),
-              max_age: String(item.max_age || 45),
-              salary_range: item.salary_range || 'Negotiable',
-              bonus_details: item.benefits || '',
-              transport: item.transport || 'Provided',
-              interview_process: '',
-              shift: item.shift,
-              notes: item.requirements || '',
-              flag: '🌐',
-              theme: 'gold',
-              description: item.description || ''
-            };
+          // Merge Supabase live status with the full 66 sheet offers
+          const merged = SHEET_OFFERS.map(sheetItem => {
+            const dbMatch = data.find(d => d.id === sheetItem.id);
+            if (dbMatch) {
+              return {
+                ...sheetItem,
+                status: (dbMatch.status === 'hold' ? 'On Hold' : 'Active') as 'Active' | 'On Hold',
+                title: dbMatch.title || sheetItem.title,
+                salary_range: dbMatch.salary_range || sheetItem.salary_range
+              };
+            }
+            return sheetItem;
           });
-          setOffers(mapped);
+          setOffers(merged);
         }
       } catch (err) {
         console.error('Failed to fetch live offers from DB, keeping official sheet catalog', err);
@@ -353,7 +329,7 @@ export default function HomePage() {
 
           {/* Subheading */}
           <p className="text-base sm:text-lg md:text-xl text-slate-300 max-w-2xl leading-relaxed mb-10 font-normal">
-            Direct hiring with Egypt’s largest multinational accounts: Concentrix, Teleperformance, WGS, and Vodafone UK. Free door-to-door transit, zero candidate fees, and salaries up to 45,000 EGP.
+            Direct hiring with Egypt’s largest multinational accounts: Concentrix, Teleperformance, WGS, Enable, and Vodafone UK. Free door-to-door transit, zero candidate fees, and salaries up to 62,000 EGP.
           </p>
 
           {/* High-Impact CTA Actions */}
