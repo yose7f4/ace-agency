@@ -199,60 +199,61 @@ export function Navbar() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 w-full glass-panel border-b border-slate-800/80 bg-[#05070D]/85 backdrop-blur-2xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <header className="sticky top-3 sm:top-5 z-50 w-full px-3 sm:px-6 pointer-events-none">
+      <div className="max-w-6xl mx-auto floating-navbar rounded-2xl sm:rounded-full px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between pointer-events-auto border border-white/10 shadow-[0_15px_35px_-10px_rgba(0,0,0,0.8),0_0_20px_-5px_rgba(245,158,11,0.15)] bg-[#05070D]/90 backdrop-blur-2xl">
         {/* Brand Logo & Tag */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-5 sm:gap-7">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-blue-600 p-[1.5px] shadow-lg shadow-amber-500/10 group-hover:shadow-amber-500/25 group-hover:scale-105 transition-all">
+            <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-cyan-500 p-[1.5px] shadow-lg shadow-amber-500/20 group-hover:scale-105 group-hover:shadow-amber-500/40 transition-all duration-300">
               <div className="w-full h-full bg-[#05070D] rounded-[10px] flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-amber-400 group-hover:rotate-12 transition-transform duration-300" />
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 group-hover:rotate-12 transition-transform duration-300" />
               </div>
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
-                <span className="text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-blue-400">
+                <span className="text-lg sm:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-amber-200 to-amber-400">
                   ACE
                 </span>
-                <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400 group-hover:text-slate-200 transition-colors">
-                  Agency
+                <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-slate-300 group-hover:text-amber-300 transition-colors">
+                  AGENCY
                 </span>
-                <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  RLS Active
+                <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-400/10 text-amber-300 border border-amber-400/25">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live Intake Active
                 </span>
               </div>
-              <span className="text-[10px] text-slate-400 font-medium tracking-tight">
-                Talent & Commission Engine
+              <span className="text-[9px] sm:text-[10px] text-slate-400 font-medium tracking-tight">
+                Corporate BPO Recruitment
               </span>
             </div>
           </Link>
 
           {/* Desktop Anchor Navigation */}
           {pathname === '/' && (
-            <nav className="hidden lg:flex items-center gap-1 pl-4 border-l border-slate-800/80 text-xs font-semibold text-slate-300">
+            <nav className="hidden lg:flex items-center gap-1 pl-4 border-l border-white/10 text-xs font-semibold text-slate-300">
               <a
                 href="#vacancies"
-                className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-full hover:text-white hover:bg-white/[0.06] transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Compass className="w-3.5 h-3.5 text-amber-400" />
                 Vacancies
               </a>
               <a
                 href="#bento-features"
-                className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-slate-800/50 transition-colors"
+                className="px-3.5 py-1.5 rounded-full hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
               >
-                Platform
+                Technology
               </a>
               <a
                 href="#calculator"
-                className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-full hover:text-white hover:bg-white/[0.06] transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                <Award className="w-3.5 h-3.5 text-blue-400" />
-                Earnings
+                <Award className="w-3.5 h-3.5 text-cyan-400" />
+                Earnings Calculator
               </a>
               <a
                 href="#apply-now"
-                className="px-3 py-1.5 rounded-lg hover:text-amber-400 hover:bg-slate-800/50 transition-colors"
+                className="px-3.5 py-1.5 rounded-full hover:text-amber-300 hover:bg-amber-400/10 transition-all font-bold text-amber-400 cursor-pointer"
               >
                 Fast-Track Apply
               </a>
@@ -269,7 +270,7 @@ export function Navbar() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 focus:outline-none cursor-pointer"
+            className="lg:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.08] focus:outline-none cursor-pointer"
             aria-label="Toggle Navigation Menu"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

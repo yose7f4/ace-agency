@@ -169,6 +169,114 @@ body {
 .wave-bar-6 { animation: wave-bar 1.0s ease-in-out infinite 0.35s; }
 .wave-bar-7 { animation: wave-bar 1.4s ease-in-out infinite 0.05s; }
 
+/* 21st.dev Border Beam Animation */
+@keyframes border-beam {
+  0% {
+    offset-distance: 0%;
+  }
+  100% {
+    offset-distance: 100%;
+  }
+}
+
+@keyframes spin-slow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.border-beam {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  padding: 1.5px;
+}
+
+.border-beam::after {
+  content: "";
+  position: absolute;
+  aspect-ratio: 1;
+  width: 140px;
+  background: linear-gradient(to right, transparent, #F59E0B, #06B6D4, transparent);
+  offset-anchor: 100% 50%;
+  offset-path: rect(0 auto auto 0 round 24px);
+  animation: border-beam 7s linear infinite;
+}
+
+/* Radar pulse animation for live dispatch */
+@keyframes radar-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+.radar-circle {
+  animation: radar-pulse 2.4s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+
+/* Floating pill navbar */
+.floating-navbar {
+  background: rgba(5, 7, 13, 0.75);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 25px -5px rgba(245, 158, 11, 0.1);
+}
+
+/* Luxury Card Glows */
+.luxury-glow-gold {
+  box-shadow: 0 0 40px -10px rgba(245, 158, 11, 0.35);
+}
+
+.luxury-glow-cyan {
+  box-shadow: 0 0 40px -10px rgba(6, 182, 212, 0.35);
+}
+
+/* Ticket notch for luxury boarding pass job cards */
+.ticket-notch-l {
+  position: relative;
+}
+.ticket-notch-l::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background-color: #05070D;
+  border-radius: 9999px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 10;
+}
+
+.ticket-notch-r::after {
+  content: "";
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background-color: #05070D;
+  border-radius: 9999px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 10;
+}
+
 /* Custom refined scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
