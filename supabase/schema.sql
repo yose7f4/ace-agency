@@ -8,11 +8,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ==============================================================================
--- 0. CLEAN RECREATION (Avoids column drift and conflicts upon re-running)
--- ==============================================================================
-DROP TABLE IF EXISTS public.candidates, public.offers CASCADE;
-
--- ==============================================================================
 -- 1. ENUMS & TYPES
 -- ==============================================================================
 
@@ -83,16 +78,12 @@ CREATE TABLE IF NOT EXISTS public.offers (
   level TEXT NOT NULL DEFAULT 'B2',          -- 'B1', 'B2', 'C1', 'Fluent', etc.
   shift TEXT NOT NULL DEFAULT 'Day Shift',    -- 'Day Shift', 'Night Shift', 'Rotational', '24/7'
   transport TEXT NOT NULL DEFAULT 'Provided',-- 'Provided', 'Allowance', 'None'
-  age_range TEXT NOT NULL DEFAULT '18-45',
   min_age INTEGER NOT NULL DEFAULT 18,
   max_age INTEGER NOT NULL DEFAULT 45,
   grad_status TEXT NOT NULL DEFAULT 'Graduates & Undergrads', -- 'Graduates Only', 'Graduates & Undergrads', 'Any'
-  nationality TEXT NOT NULL DEFAULT 'Egyptians & Foreigners',
-  experience_required BOOLEAN NOT NULL DEFAULT false,
   salary_range TEXT,
-  description TEXT,
+  description TEXT NOT NULL,
   minimized_description TEXT, -- Formatted for "Copy Minimized Offer + My Affiliate Link"
-  minimized_post TEXT,        -- Alias for minimized_description
   requirements TEXT,
   benefits TEXT,
   cooling_period_days INTEGER NOT NULL DEFAULT 30 CHECK (cooling_period_days >= 0),
@@ -129,9 +120,6 @@ CREATE TABLE IF NOT EXISTS public.candidates (
   cv_url TEXT,                -- Optional portfolio/CV link
   experience_years INTEGER NOT NULL DEFAULT 0 CHECK (experience_years >= 0),
   english_level TEXT,         -- 'B1', 'B2', 'C1', 'C2', 'Fluent', etc.
-  military_status TEXT,
-  call_center_experience TEXT,
-  bpo_experience TEXT,
   status candidate_status NOT NULL DEFAULT 'Applied',
   interview_date TIMESTAMPTZ, -- Scheduled interview timestamp
   batch_start_date DATE,      -- When candidate begins onboarding/batch
@@ -222,6 +210,17 @@ AS $$
   );
 $$;
 
+-- Get current authenticated user's team leader ID (prevents RLS recursion)
+CREATE OR REPLACE FUNCTION public.get_current_user_team_leader()
+RETURNS UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT team_leader_id FROM public.profiles WHERE id = auth.uid();
+$$;
+
 -- Public helper to resolve active recruiter by referral code
 CREATE OR REPLACE FUNCTION public.get_recruiter_by_referral(p_referral_code TEXT)
 RETURNS TABLE (
@@ -288,13 +287,13 @@ DECLARE
   v_meta_role TEXT;
   v_meta_leader TEXT;
 BEGIN
-  -- Extract role from metadata if provided
-  v_meta_role := NEW.raw_user_meta_data->>'role';
+  -- Extract role from metadata (supports both app_metadata and user_metadata set by Admin)
+  v_meta_role := COALESCE(NEW.raw_app_meta_data->>'role', NEW.raw_user_meta_data->>'role');
   IF v_meta_role IN ('admin', 'team_leader', 'recruiter') THEN
     v_role := v_meta_role::user_role;
   END IF;
 
-  v_meta_leader := NEW.raw_user_meta_data->>'team_leader_id';
+  v_meta_leader := COALESCE(NEW.raw_app_meta_data->>'team_leader_id', NEW.raw_user_meta_data->>'team_leader_id');
   IF v_meta_leader IS NOT NULL AND v_meta_leader ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
     v_team_leader_id := v_meta_leader::UUID;
   END IF;
@@ -314,11 +313,16 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(COALESCE(NEW.email, ''), '@', 1)),
     v_role,
     v_team_leader_id,
-    UPPER(SUBSTRING(MD5(NEW.id::TEXT || CLOCK_TIMESTAMP()::TEXT) FROM 1 FOR 8)),
+    COALESCE(NEW.raw_user_meta_data->>'referral_code', UPPER(SUBSTRING(MD5(NEW.id::TEXT || CLOCK_TIMESTAMP()::TEXT) FROM 1 FOR 8))),
     NEW.raw_user_meta_data->>'phone',
     NEW.raw_user_meta_data->>'avatar_url'
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    role = EXCLUDED.role,
+    team_leader_id = EXCLUDED.team_leader_id,
+    full_name = COALESCE(EXCLUDED.full_name, profiles.full_name),
+    phone = COALESCE(EXCLUDED.phone, profiles.phone),
+    referral_code = COALESCE(EXCLUDED.referral_code, profiles.referral_code);
 
   RETURN NEW;
 END;
@@ -474,6 +478,26 @@ CREATE TRIGGER trg_calculate_candidate_commission
 -- Strict role isolation per AGENT.md
 -- ==============================================================================
 
+-- ------------------------------------------------------------------------------
+-- DROP EXISTING POLICIES FIRST (IDEMPOTENT RERUNS / FIXES ERROR 42710)
+-- ------------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Admin full access on profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users view own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Team Leader view assigned recruiters" ON public.profiles;
+DROP POLICY IF EXISTS "Users update own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Public view active referral codes" ON public.profiles;
+
+DROP POLICY IF EXISTS "Admin full access on offers" ON public.offers;
+DROP POLICY IF EXISTS "Recruiters and Leaders view active offers" ON public.offers;
+DROP POLICY IF EXISTS "Public view active offers" ON public.offers;
+
+DROP POLICY IF EXISTS "Admin full access on candidates" ON public.candidates;
+DROP POLICY IF EXISTS "Team Leader select team candidates" ON public.candidates;
+DROP POLICY IF EXISTS "Team Leader update team candidates" ON public.candidates;
+DROP POLICY IF EXISTS "Recruiter select own candidates" ON public.candidates;
+DROP POLICY IF EXISTS "Recruiter insert own candidates" ON public.candidates;
+DROP POLICY IF EXISTS "Public candidates submit application" ON public.candidates;
+
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.offers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.candidates ENABLE ROW LEVEL SECURITY;
@@ -483,7 +507,6 @@ ALTER TABLE public.candidates ENABLE ROW LEVEL SECURITY;
 -- ------------------------------------------------------------------------------
 
 -- Super Admin: Full CRUD access to all profiles
-DROP POLICY IF EXISTS "Admin full access on profiles" ON public.profiles;
 CREATE POLICY "Admin full access on profiles"
   ON public.profiles
   FOR ALL
@@ -492,7 +515,6 @@ CREATE POLICY "Admin full access on profiles"
   WITH CHECK (public.is_admin());
 
 -- Users can view their own profile
-DROP POLICY IF EXISTS "Users view own profile" ON public.profiles;
 CREATE POLICY "Users view own profile"
   ON public.profiles
   FOR SELECT
@@ -500,7 +522,6 @@ CREATE POLICY "Users view own profile"
   USING (id = auth.uid());
 
 -- Team Leaders: Can view recruiters assigned to their team (profiles.team_leader_id == current_user.id)
-DROP POLICY IF EXISTS "Team Leader view assigned recruiters" ON public.profiles;
 CREATE POLICY "Team Leader view assigned recruiters"
   ON public.profiles
   FOR SELECT
@@ -510,7 +531,7 @@ CREATE POLICY "Team Leader view assigned recruiters"
   );
 
 -- Users can update their own personal profile
-DROP POLICY IF EXISTS "Users update own profile" ON public.profiles;
+-- Non-admin cannot elevate own role or change assigned team leader
 CREATE POLICY "Users update own profile"
   ON public.profiles
   FOR UPDATE
@@ -518,24 +539,20 @@ CREATE POLICY "Users update own profile"
   USING (id = auth.uid())
   WITH CHECK (
     id = auth.uid()
-    -- Non-admin cannot elevate own role or change team_leader_id
-    AND (public.is_admin() OR role = (SELECT p.role FROM public.profiles p WHERE p.id = auth.uid()))
+    AND (
+      public.is_admin()
+      OR (
+        role = public.get_current_user_role()
+        AND team_leader_id IS NOT DISTINCT FROM public.get_current_user_team_leader()
+      )
+    )
   );
-
--- Public / Anonymous: Can view active profiles' referral_code and name for affiliate attribution
-DROP POLICY IF EXISTS "Public view active referral codes" ON public.profiles;
-CREATE POLICY "Public view active referral codes"
-  ON public.profiles
-  FOR SELECT
-  TO anon
-  USING (is_active = true AND referral_code IS NOT NULL);
 
 -- ------------------------------------------------------------------------------
 -- 6.2 OFFERS POLICIES
 -- ------------------------------------------------------------------------------
 
 -- Super Admin: Full CRUD access to all offers
-DROP POLICY IF EXISTS "Admin full access on offers" ON public.offers;
 CREATE POLICY "Admin full access on offers"
   ON public.offers
   FOR ALL
@@ -544,7 +561,6 @@ CREATE POLICY "Admin full access on offers"
   WITH CHECK (public.is_admin());
 
 -- Team Leaders & Recruiters: Can browse active offers
-DROP POLICY IF EXISTS "Recruiters and Leaders view active offers" ON public.offers;
 CREATE POLICY "Recruiters and Leaders view active offers"
   ON public.offers
   FOR SELECT
@@ -552,7 +568,6 @@ CREATE POLICY "Recruiters and Leaders view active offers"
   USING (status = 'active' OR public.is_admin());
 
 -- Public Candidates (anon): Can view active offers for applying
-DROP POLICY IF EXISTS "Public view active offers" ON public.offers;
 CREATE POLICY "Public view active offers"
   ON public.offers
   FOR SELECT
@@ -564,7 +579,6 @@ CREATE POLICY "Public view active offers"
 -- ------------------------------------------------------------------------------
 
 -- Super Admin: Full CRUD access to all candidates
-DROP POLICY IF EXISTS "Admin full access on candidates" ON public.candidates;
 CREATE POLICY "Admin full access on candidates"
   ON public.candidates
   FOR ALL
@@ -574,7 +588,6 @@ CREATE POLICY "Admin full access on candidates"
 
 -- Team Leader: STRICT ISOLATION
 -- Can ONLY see Candidates where candidates.team_leader_id == current_user.id
-DROP POLICY IF EXISTS "Team Leader select team candidates" ON public.candidates;
 CREATE POLICY "Team Leader select team candidates"
   ON public.candidates
   FOR SELECT
@@ -584,7 +597,6 @@ CREATE POLICY "Team Leader select team candidates"
   );
 
 -- Team Leader: Update team candidates (status, interview, notes, batch start date)
-DROP POLICY IF EXISTS "Team Leader update team candidates" ON public.candidates;
 CREATE POLICY "Team Leader update team candidates"
   ON public.candidates
   FOR UPDATE
@@ -598,7 +610,6 @@ CREATE POLICY "Team Leader update team candidates"
 
 -- Recruiter: STRICT ISOLATION
 -- Can ONLY see Candidates where candidates.recruiter_id == current_user.id
-DROP POLICY IF EXISTS "Recruiter select own candidates" ON public.candidates;
 CREATE POLICY "Recruiter select own candidates"
   ON public.candidates
   FOR SELECT
@@ -608,7 +619,6 @@ CREATE POLICY "Recruiter select own candidates"
   );
 
 -- Recruiter: Can add candidate under their own recruiter_id
-DROP POLICY IF EXISTS "Recruiter insert own candidates" ON public.candidates;
 CREATE POLICY "Recruiter insert own candidates"
   ON public.candidates
   FOR INSERT
@@ -619,7 +629,6 @@ CREATE POLICY "Recruiter insert own candidates"
 
 -- Public Candidates (Unauthenticated): Can submit application
 -- Cannot see internal recruiter notes, agency codes, or commission numbers
-DROP POLICY IF EXISTS "Public candidates submit application" ON public.candidates;
 CREATE POLICY "Public candidates submit application"
   ON public.candidates
   FOR INSERT
@@ -646,16 +655,12 @@ SELECT
   level,
   shift,
   transport,
-  age_range,
   min_age,
   max_age,
   grad_status,
-  nationality,
-  experience_required,
   salary_range,
   description,
   minimized_description,
-  minimized_post,
   requirements,
   benefits,
   cooling_period_days,
@@ -669,8 +674,11 @@ GRANT SELECT ON public.public_offers TO anon, authenticated;
 -- ------------------------------------------------------------------------------
 -- 7.2 Commissions & Cooling Status View
 -- Helper view for Admin, Team Leader and Recruiter dashboards
+-- WITH (security_invoker = true) ensures caller's RLS is strictly enforced
 -- ------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW public.candidate_commissions_view AS
+CREATE OR REPLACE VIEW public.candidate_commissions_view
+WITH (security_invoker = true)
+AS
 SELECT
   c.id AS candidate_id,
   c.full_name AS candidate_name,
@@ -704,4 +712,32 @@ LEFT JOIN public.offers o ON c.offer_id = o.id
 LEFT JOIN public.profiles r ON c.recruiter_id = r.id
 LEFT JOIN public.profiles tl ON c.team_leader_id = tl.id;
 
-GRANT SELECT ON public.candidate_commissions_view TO authenticated;
+GRANT SELECT ON public.candidate_commissions_view TO authenticated, service_role;
+
+-- ==========================================
+-- SUPABASE DATA API GRANTS
+-- (RLS policies strictly enforce row-level security)
+-- ==========================================
+
+-- 1. Ensure roles can access the public schema and sequences
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+
+-- 2. Profiles Table Grants
+-- Protect profiles table from anonymous scraping. Internal triggers handle affiliate resolution.
+REVOKE ALL ON TABLE public.profiles FROM anon;
+GRANT ALL ON TABLE public.profiles TO authenticated, service_role;
+
+-- 3. Offers Table Grants
+-- 'anon' needs SELECT to view active BPO offers on the homepage and /apply page
+GRANT SELECT ON TABLE public.offers TO anon;
+GRANT ALL ON TABLE public.offers TO authenticated, service_role;
+
+-- 4. Candidates Table Grants
+-- 'anon' needs INSERT to submit candidate applications.
+GRANT INSERT ON TABLE public.candidates TO anon;
+GRANT ALL ON TABLE public.candidates TO authenticated, service_role;
+
+-- 5. Views Grants
+GRANT SELECT ON public.public_offers TO anon, authenticated;
+GRANT SELECT ON public.candidate_commissions_view TO authenticated, service_role;

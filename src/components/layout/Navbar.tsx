@@ -16,7 +16,6 @@ import {
   Menu,
   X,
   Send,
-  Calculator,
   Compass,
   ArrowRight,
   Search
@@ -251,13 +250,6 @@ export function Navbar() {
                 <Award className="w-3.5 h-3.5 text-blue-400" />
                 Affiliate Engine
               </a>
-              <a
-                href="#calculator"
-                className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-1.5"
-              >
-                <Calculator className="w-3.5 h-3.5 text-emerald-400" />
-                Earnings Calculator
-              </a>
             </nav>
           )}
         </div>
@@ -313,14 +305,6 @@ export function Navbar() {
           >
             <Award className="w-4 h-4 text-emerald-400" />
             Recruiter & Leader Hubs
-          </a>
-          <a
-            href="#calculator"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60"
-          >
-            <Calculator className="w-4 h-4 text-amber-400" />
-            Commission Earnings Calculator
           </a>
           <div className="pt-2 border-t border-slate-800 flex flex-col gap-2">
             <Link

@@ -17,7 +17,6 @@ import {
   Mic, 
   Globe, 
   Send,
-  Calculator,
   ChevronRight,
   Headphones,
   Check,
@@ -221,8 +220,6 @@ export default function HomePage() {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'candidates' | 'recruiters'>('candidates');
-  const [placedCount, setPlacedCount] = useState<number>(4);
-  const [commissionTier, setCommissionTier] = useState<number>(4500);
   const [faqCategory, setFaqCategory] = useState<'all' | 'candidates' | 'recruiters'>('all');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
@@ -261,11 +258,6 @@ export default function HomePage() {
 
     return matchesLang && matchesSearch;
   });
-
-  // Calculations for interactive earnings slider
-  const totalCommission = placedCount * commissionTier;
-  const teamLeaderOverride = Math.round(totalCommission * 0.15);
-  const totalWithOverride = totalCommission + teamLeaderOverride;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#070a12] text-slate-100 selection:bg-amber-500/30 selection:text-amber-200">
@@ -708,115 +700,6 @@ export default function HomePage() {
             </div>
           </div>
         )}
-      </section>
-
-      {/* Interactive Recruiter Earnings Calculator */}
-      <section id="calculator" className="py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full">
-        <div className="glass-panel rounded-3xl p-6 sm:p-10 border border-slate-800 shadow-2xl relative overflow-hidden">
-          {/* Subtle glow */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-amber-500/10 via-emerald-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-800">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold mb-2">
-                <Calculator className="w-3.5 h-3.5" />
-                PROJECTION ENGINE
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white">
-                Affiliate Recruiter Earnings Calculator
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                Estimate your monthly earnings based on candidate placements and language tier.
-              </p>
-            </div>
-            <div className="text-right hidden sm:block">
-              <span className="text-xs font-mono text-slate-400">Prorated Instapay / Bank Wire</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            {/* Controls */}
-            <div className="space-y-6">
-              <div>
-                <div className="flex justify-between items-center text-xs font-bold text-slate-300 mb-2">
-                  <span>Placed Candidates This Month:</span>
-                  <span className="text-base text-amber-400 font-black">{placedCount} Candidates</span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="20"
-                  value={placedCount}
-                  onChange={(e) => setPlacedCount(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400"
-                />
-                <div className="flex justify-between text-[10px] text-slate-400 mt-1.5 font-mono">
-                  <span>1 placement</span>
-                  <span>10 placements</span>
-                  <span>20+ placements</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-2">
-                  Average Placement Commission Tier:
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: 'Standard Telesales', val: 1500 },
-                    { label: 'French / Spanish', val: 2500 },
-                    { label: 'Dutch Executive', val: 4000 }
-                  ].map((tier) => (
-                    <button
-                      key={tier.val}
-                      onClick={() => setCommissionTier(tier.val)}
-                      className={`p-3 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
-                        commissionTier === tier.val
-                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-md'
-                          : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-white'
-                      }`}
-                    >
-                      <span className="block text-[11px] font-medium">{tier.label}</span>
-                      <span className="block font-black text-white mt-1">{tier.val.toLocaleString()} EGP</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Live Calculation Display Card */}
-            <div className="glass-panel-emerald rounded-2xl p-6 border relative space-y-4">
-              <div>
-                <span className="text-xs text-slate-400 block font-medium">Estimated Direct Monthly Payout</span>
-                <span className="text-3xl sm:text-4xl font-black text-emerald-400 tracking-tight">
-                  {totalCommission.toLocaleString()} <span className="text-sm font-bold text-emerald-300">EGP</span>
-                </span>
-              </div>
-
-              <div className="pt-3 border-t border-emerald-500/20 space-y-2 text-xs text-slate-300">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Per-candidate reward:</span>
-                  <span className="font-bold text-white">{commissionTier.toLocaleString()} EGP</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Team Leader Override (if applicable):</span>
-                  <span className="font-bold text-amber-400">+{teamLeaderOverride.toLocaleString()} EGP</span>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t border-slate-800 text-sm font-bold text-white">
-                  <span>Total Potential Yield:</span>
-                  <span className="text-amber-300 font-black">{totalWithOverride.toLocaleString()} EGP</span>
-                </div>
-              </div>
-
-              <Link
-                href="/login"
-                className="w-full py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 hover:from-emerald-400 hover:to-teal-500 flex items-center justify-center gap-1.5 transition-all mt-4 cursor-pointer"
-              >
-                Access Recruiter Portal to Start Earning <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* 3 Pillars / Dashboards Section */}
