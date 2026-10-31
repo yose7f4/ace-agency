@@ -12,7 +12,6 @@ import {
   Briefcase, 
   ShieldCheck, 
   Users, 
-  DollarSign, 
   CheckCircle2, 
   Clock, 
   Mic, 
@@ -37,10 +36,6 @@ import {
   CreditCard,
   Share2,
   Copy,
-  Play,
-  Pause,
-  Radio,
-  Car,
   FileCheck2,
   PhoneCall,
   UserCheck
@@ -185,14 +180,6 @@ export default function HomePage() {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [faqCategory, setFaqCategory] = useState<'all' | 'candidates' | 'recruiters'>('all');
 
-  // Interactive Live Radar & Audio Wave state
-  const [isPlayingAudition, setIsPlayingAudition] = useState(false);
-  const [audioProgress, setAudioProgress] = useState(25);
-
-  // Recruiter Earnings Calculator state
-  const [placedCount, setPlacedCount] = useState<number>(6);
-  const [averageCommission, setAverageCommission] = useState<number>(2600);
-
   // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -269,12 +256,6 @@ export default function HomePage() {
 
     return matchesLang && matchesSearch;
   });
-
-  // Earnings calculations
-  const totalRecruiterEarnings = placedCount * averageCommission;
-  const teamLeaderOverride = Math.round(totalRecruiterEarnings * 0.15);
-  const totalCombined = totalRecruiterEarnings + teamLeaderOverride;
-  const annualProjection = totalCombined * 12;
 
   return (
     <KineticGrid globalColor="default" className="min-h-screen flex flex-col bg-[#05070D] text-slate-100 selection:bg-amber-400/30 selection:text-amber-200 relative overflow-x-hidden">
@@ -357,141 +338,8 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* ========================================================================= */}
-          {/* THE HERO ANCHOR: Interactive Live BPO Dispatch Terminal                   */}
-          {/* ========================================================================= */}
-          <div className="w-full max-w-4xl mx-auto rounded-3xl p-6 sm:p-8 bg-gradient-to-b from-[#0F1626]/90 to-[#070A12]/95 border border-amber-400/30 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9),0_0_30px_rgba(245,158,11,0.15)] relative overflow-hidden text-left backdrop-blur-2xl">
-            {/* Terminal Top Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-5 border-b border-white/10">
-              <div className="flex items-center gap-2.5">
-                <span className="w-3 h-3 rounded-full bg-red-500/80 inline-block" />
-                <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
-                <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
-                <span className="ml-2 font-mono text-xs text-amber-300 font-bold tracking-wider uppercase">
-                  ACE DISPATCH TERMINAL // CAIRO HUB
-                </span>
-              </div>
-              <div className="flex items-center gap-3 text-xs font-mono text-slate-400">
-                <span className="inline-flex items-center gap-1.5 text-emerald-400">
-                  <Radio className="w-3.5 h-3.5 animate-pulse" />
-                  REAL-TIME CANDIDATE MATCHING
-                </span>
-              </div>
-            </div>
-
-            {/* Terminal Body: Candidate Audition & Instant Matching */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-6 items-center">
-              {/* Left Column: Spoken Voice Audition Player */}
-              <div className="md:col-span-7 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest block">
-                      CANDIDATE AUDITION EVALUATION
-                    </span>
-                    <h3 className="text-lg font-bold text-white mt-0.5">
-                      Sarah M. — Spoken English Audition
-                    </h3>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
-                    CEFR C1 Verified
-                  </span>
-                </div>
-
-                {/* Animated Frequency Bars */}
-                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-3">
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span className="flex items-center gap-1.5 font-mono text-[11px] text-slate-300">
-                      <Mic className="w-3.5 h-3.5 text-amber-400" />
-                      45-Second Vocaroo Stream
-                    </span>
-                    <span className="font-mono text-emerald-400 text-xs font-bold">
-                      Match Score: 99.4%
-                    </span>
-                  </div>
-
-                  {/* Equalizer Frequency Bars */}
-                  <div className="h-10 flex items-center justify-between gap-1 px-1">
-                    {[16, 28, 40, 24, 36, 48, 20, 32, 44, 28, 38, 52, 22, 34, 46, 30, 24, 40, 50, 28, 36, 20, 30, 44].map((height, i) => (
-                      <div
-                        key={i}
-                        className={`w-full rounded-full transition-all duration-300 ${
-                          isPlayingAudition
-                            ? 'bg-gradient-to-t from-amber-500 to-cyan-400 animate-pulse'
-                            : 'bg-slate-700'
-                        }`}
-                        style={{
-                          height: isPlayingAudition ? `${Math.max(8, (height * (i % 3 + 1)) % 45)}px` : `${height * 0.4}px`
-                        }}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1">
-                    <button
-                      onClick={() => setIsPlayingAudition(!isPlayingAudition)}
-                      className="px-3.5 py-1.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
-                    >
-                      {isPlayingAudition ? (
-                        <>
-                          <Pause className="w-3 h-3 text-slate-950" /> Pause Sample
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-3 h-3 text-slate-950" /> Play Voice Sample
-                        </>
-                      )}
-                    </button>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      Accent: Neutral US • Fluency: Native
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Instant Match Target Vacancy */}
-              <div className="md:col-span-5 p-5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-cyan-500/5 to-transparent border border-amber-400/25 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider font-bold">
-                      TARGET MATCH
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Direct Shortlist
-                    </span>
-                  </div>
-                  <h4 className="text-base font-bold text-white">
-                    Concentrix UK Executive
-                  </h4>
-                  <p className="text-xs text-slate-300 mt-1 flex items-center gap-1">
-                    <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                    New Cairo Campus &bull; Rotational 5D
-                  </p>
-
-                  <div className="mt-4 p-3 rounded-xl bg-black/30 border border-white/5 space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-400">Net Salary:</span>
-                      <span className="font-bold text-amber-400 font-mono">24,000 EGP</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-400">Mobility:</span>
-                      <span className="text-slate-200">Door-to-Door Cab</span>
-                    </div>
-                  </div>
-                </div>
-
-                <a
-                  href="#apply-now"
-                  className="mt-4 w-full py-2.5 px-4 rounded-xl bg-white/[0.08] hover:bg-amber-400 hover:text-slate-950 text-white text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer border border-white/10"
-                >
-                  <span>Submit Your Own Audition</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            </div>
-          </div>
-
           {/* Social Proof Enterprise Brand Strip */}
-          <div className="mt-14 w-full max-w-5xl">
+          <div className="mt-8 sm:mt-12 w-full max-w-5xl">
             <span className="text-[11px] font-mono uppercase tracking-widest text-slate-400 block mb-5 text-center">
               OFFICIALLY SOURCING TALENT FOR EGYPT'S LARGEST BPO OPERATORS
             </span>
@@ -604,37 +452,8 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Bento Card 3: Free Door-to-Door Transportation */}
-          <div className="rounded-3xl p-8 bg-gradient-to-br from-[#0F1626]/90 to-[#070A12]/90 border border-white/10 hover:border-cyan-400/40 transition-all shadow-xl relative overflow-hidden flex flex-col justify-between group">
-            <div className="absolute top-0 right-0 w-60 h-60 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-cyan-500/20 transition-all" />
-
-            <div>
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5 w-fit font-mono mb-4">
-                <Car className="w-3.5 h-3.5" />
-                FREE TRANSIT GUARANTEE
-              </span>
-              <h3 className="text-xl font-black text-white mb-2">
-                Door-to-Door Cabs & AC Buses
-              </h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                All partnered accounts provide door-to-door cab services for night shifts and designated bus meeting points connecting Greater Cairo, Giza, and Qalyubia directly to corporate campuses.
-              </p>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-2 text-[11px] font-mono">
-              <div className="p-2.5 rounded-xl bg-white/[0.04] text-slate-300">
-                <span className="text-cyan-300 block font-bold">New Cairo</span>
-                <span>WGS & Concentrix</span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-white/[0.04] text-slate-300">
-                <span className="text-cyan-300 block font-bold">Maadi Tech</span>
-                <span>Alorica & Vodafone</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Bento Card 4: 60-Day Anti-Theft Candidate Lock */}
-          <div className="lg:col-span-2 rounded-3xl p-8 bg-gradient-to-br from-[#0F1626]/90 to-[#070A12]/90 border border-white/10 hover:border-amber-400/40 transition-all shadow-xl relative overflow-hidden flex flex-col justify-between group">
+          {/* Bento Card 3: 60-Day Anti-Theft Candidate Lock */}
+          <div className="lg:col-span-3 rounded-3xl p-8 bg-gradient-to-br from-[#0F1626]/90 to-[#070A12]/90 border border-white/10 hover:border-amber-400/40 transition-all shadow-xl relative overflow-hidden flex flex-col justify-between group">
             <div className="absolute top-0 right-0 w-80 h-80 bg-amber-400/10 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-400/20 transition-all" />
 
             <div>
@@ -794,118 +613,7 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 4. FINTECH RECRUITER EARNINGS SIMULATOR                                    */}
-      {/* ========================================================================= */}
-      <section id="calculator" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full border-t border-white/10 relative z-10">
-        <div className="max-w-4xl mx-auto rounded-3xl p-6 sm:p-10 bg-gradient-to-br from-[#0F1626]/95 via-[#0A0E1A]/95 to-[#05070D]/95 border border-amber-400/30 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.8),0_0_30px_rgba(245,158,11,0.15)] relative overflow-hidden backdrop-blur-2xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 text-xs font-bold mb-2 font-mono">
-                <DollarSign className="w-3.5 h-3.5" />
-                AFFILIATE REVENUE CALCULATOR
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white">
-                Recruiter Commission Projection Simulator
-              </h2>
-            </div>
-            <span className="text-xs font-mono text-slate-400 self-start sm:self-auto">
-              Automated 30-Day Cooling Clearance
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mt-8 items-center">
-            {/* Left Controls: Sliders */}
-            <div className="md:col-span-6 space-y-6">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    Monthly Candidates Placed
-                  </label>
-                  <span className="text-lg font-black text-amber-400 font-mono">
-                    {placedCount} Candidates
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="30"
-                  step="1"
-                  value={placedCount}
-                  onChange={(e) => setPlacedCount(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400"
-                />
-                <div className="flex justify-between text-[10px] text-slate-500 font-mono mt-1">
-                  <span>1 placement</span>
-                  <span>15 placements</span>
-                  <span>30 placements</span>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    Average Commission Per Hire
-                  </label>
-                  <span className="text-lg font-black text-cyan-400 font-mono">
-                    {averageCommission.toLocaleString('en-US')} EGP
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="1500"
-                  max="4500"
-                  step="250"
-                  value={averageCommission}
-                  onChange={(e) => setAverageCommission(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
-                />
-                <div className="flex justify-between text-[10px] text-slate-500 font-mono mt-1">
-                  <span>1,500 EGP (B1)</span>
-                  <span>2,800 EGP (B2)</span>
-                  <span>4,500 EGP (German C1)</span>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-2 text-xs">
-                <div className="flex justify-between text-slate-300">
-                  <span>Direct Recruiter Payout:</span>
-                  <span className="font-mono font-bold text-white">{totalRecruiterEarnings.toLocaleString('en-US')} EGP</span>
-                </div>
-                <div className="flex justify-between text-slate-300">
-                  <span>Team Leader 15% Override:</span>
-                  <span className="font-mono font-bold text-cyan-300">+{teamLeaderOverride.toLocaleString('en-US')} EGP</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Display: Big Numbers */}
-            <div className="md:col-span-6 p-6 sm:p-8 rounded-3xl bg-black/50 border border-amber-400/20 text-center flex flex-col justify-center items-center">
-              <span className="text-xs font-mono text-amber-400 uppercase tracking-widest font-bold mb-1">
-                PROJECTED MONTHLY REVENUE
-              </span>
-              <span className="text-4xl sm:text-5xl font-black text-white font-mono tracking-tight my-2">
-                {totalCombined.toLocaleString('en-US')} <span className="text-lg text-amber-400 font-sans">EGP</span>
-              </span>
-              <span className="text-xs text-slate-400">
-                Annualized Run-Rate: <strong className="text-emerald-400 font-mono">{annualProjection.toLocaleString('en-US')} EGP / yr</strong>
-              </span>
-
-              <div className="mt-6 w-full pt-6 border-t border-white/10 flex flex-col gap-2">
-                <Link
-                  href="/login"
-                  className="w-full py-3 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs tracking-wide transition-all shadow-md flex items-center justify-center gap-1.5"
-                >
-                  <span>Join as an Affiliate Recruiter</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 5. INTEGRATED 3-STEP CANDIDATE APPLICATION GATEWAY                        */}
+      {/* 4. INTEGRATED 3-STEP CANDIDATE APPLICATION GATEWAY                        */}
       {/* ========================================================================= */}
       <section id="apply-now" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full border-t border-white/10 relative z-10">
         <div className="text-center mb-10">
@@ -1014,7 +722,6 @@ export default function HomePage() {
           <div className="flex flex-wrap items-center gap-6">
             <a href="#vacancies" className="hover:text-amber-400 transition-colors">Vacancies</a>
             <a href="#bento-features" className="hover:text-amber-400 transition-colors">Technology</a>
-            <a href="#calculator" className="hover:text-amber-400 transition-colors">Affiliate Calculator</a>
             <Link href="/track" className="hover:text-amber-400 transition-colors">Candidate Tracker</Link>
             <Link href="/login" className="hover:text-amber-400 transition-colors">Partner Sign In</Link>
           </div>

@@ -245,13 +245,6 @@ export function Navbar() {
                 Technology
               </a>
               <a
-                href="#calculator"
-                className="px-3.5 py-1.5 rounded-full hover:text-white hover:bg-white/[0.06] transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Award className="w-3.5 h-3.5 text-cyan-400" />
-                Earnings Calculator
-              </a>
-              <a
                 href="#apply-now"
                 className="px-3.5 py-1.5 rounded-full hover:text-amber-300 hover:bg-amber-400/10 transition-all font-bold text-amber-400 cursor-pointer"
               >
