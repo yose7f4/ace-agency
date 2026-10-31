@@ -5,8 +5,45 @@ import { useSearchParams } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { captureReferralCode, getStoredReferralCode } from '@/lib/affiliate';
 import { VocarooPlayer } from '@/components/voice/VocarooPlayer';
-import type { Offer } from '@/lib/supabase/types';
+import type { Offer, OfferStatus } from '@/lib/supabase/types';
+import { SHEET_OFFERS } from '@/data/sheetOffers';
 import Link from 'next/link';
+
+const FALLBACK_OFFERS_FROM_SHEET: Offer[] = SHEET_OFFERS.map(s => ({
+  id: s.id,
+  title: `${s.company_name} - ${s.title}`,
+  company_name: s.company_full,
+  location: s.location,
+  job_type: 'Full-time',
+  work_style: s.work_style,
+  language: s.primary_language,
+  level: s.level,
+  shift: s.shift,
+  transport: s.transport,
+  age_range: `${s.min_age} - ${s.max_age}`,
+  min_age: parseInt(s.min_age) || 18,
+  max_age: parseInt(s.max_age) || 45,
+  grad_status: s.grad_status_raw,
+  nationality: 'Egyptians & Foreigners',
+  experience_required: s.experience_category === 'experienced',
+  salary_range: s.salary_range,
+  description: s.description,
+  minimized_description: null,
+  minimized_post: null,
+  requirements: s.notes,
+  benefits: s.bonus_details,
+  cooling_period_days: 30,
+  commission_amount: 2500,
+  recruiter_commission: 2500,
+  tl_commission: 500,
+  um_commission: 0,
+  agency_code: 'ACE',
+  internal_notes: s.notes,
+  created_by: null,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  status: (s.status === 'On Hold' ? 'hold' : 'active') as OfferStatus
+}));
 import { 
   Sparkles, 
   Send, 
@@ -39,8 +76,13 @@ interface CandidateApplicationFormProps {
 
 function CandidateApplicationFormInner({ initialOfferId }: CandidateApplicationFormProps) {
   const searchParams = useSearchParams();
-  const [offer, setOffer] = useState<Offer | null>(null);
-  const [availableOffers, setAvailableOffers] = useState<Offer[]>([]);
+  const [offer, setOffer] = useState<Offer | null>(() => {
+    if (initialOfferId) {
+      return FALLBACK_OFFERS_FROM_SHEET.find(o => o.id === initialOfferId) || null;
+    }
+    return null;
+  });
+  const [availableOffers, setAvailableOffers] = useState<Offer[]>(FALLBACK_OFFERS_FROM_SHEET);
   const [selectedOfferId, setSelectedOfferId] = useState<string>(initialOfferId || '');
   const [referralCode, setReferralCode] = useState<string>('');
 
@@ -94,20 +136,29 @@ function CandidateApplicationFormInner({ initialOfferId }: CandidateApplicationF
           .eq('status', 'active')
           .order('title');
 
-        if (data) {
+        if (data && data.length > 0) {
           setAvailableOffers(data as Offer[]);
           if (initialOfferId) {
-            const current = (data as Offer[]).find(o => o.id === initialOfferId);
+            const current = (data as Offer[]).find(o => o.id === initialOfferId) || FALLBACK_OFFERS_FROM_SHEET.find(o => o.id === initialOfferId);
             if (current) setOffer(current);
           }
         }
       } catch (err) {
-        console.error('Error loading offers', err);
+        console.error('Error loading offers from Supabase, using sheet offers', err);
       }
     }
 
     loadOffers();
   }, [searchParams, initialOfferId]);
+
+  // When initialOfferId prop changes from parent
+  useEffect(() => {
+    if (initialOfferId) {
+      setSelectedOfferId(initialOfferId);
+      const found = availableOffers.find(o => o.id === initialOfferId) || FALLBACK_OFFERS_FROM_SHEET.find(o => o.id === initialOfferId);
+      if (found) setOffer(found);
+    }
+  }, [initialOfferId, availableOffers]);
 
   // Sync WhatsApp when "same as phone" is checked
   useEffect(() => {
@@ -197,11 +248,47 @@ function CandidateApplicationFormInner({ initialOfferId }: CandidateApplicationF
         return;
       }
 
-      // 2. Submit candidate application with all meeting data points
+      // 2. Ensure offer exists in DB if selectedOfferId is set, or record in notes to prevent foreign key errors
+      let finalOfferId: string | null = selectedOfferId || null;
+      if (finalOfferId && offer) {
+        try {
+          const { data: dbOffer } = await supabase.from('offers').select('id').eq('id', finalOfferId).maybeSingle();
+          if (!dbOffer) {
+            const { error: upsertErr } = await supabase.from('offers').insert({
+              id: finalOfferId,
+              title: offer.title,
+              company_name: offer.company_name,
+              location: offer.location,
+              job_type: offer.job_type || 'Full-time',
+              work_style: offer.work_style || 'On-site',
+              language: offer.language || 'English',
+              level: offer.level || 'B2',
+              shift: offer.shift || 'Rotational',
+              transport: offer.transport || 'Provided',
+              min_age: offer.min_age || 18,
+              max_age: offer.max_age || 45,
+              grad_status: offer.grad_status || 'Any',
+              salary_range: offer.salary_range || null,
+              description: offer.description || offer.title,
+              requirements: offer.requirements || null,
+              benefits: offer.benefits || null,
+              cooling_period_days: 30,
+              status: 'active'
+            });
+            if (upsertErr) {
+              finalOfferId = null;
+            }
+          }
+        } catch {
+          finalOfferId = null;
+        }
+      }
+
+      // 3. Submit candidate application with all meeting data points
       const { data: insertedData, error: insertError } = await supabase
         .from('candidates')
         .insert({
-          offer_id: selectedOfferId || null,
+          offer_id: finalOfferId,
           referral_code: referralCode || null,
           full_name: fullName.trim(),
           email: email.trim().toLowerCase(),
@@ -217,6 +304,7 @@ function CandidateApplicationFormInner({ initialOfferId }: CandidateApplicationF
           english_level: englishLevel,
           voice_note_url: voiceNoteUrl.trim(),
           experience_years: Number(experienceYears),
+          internal_notes: offer ? `Target: ${offer.title} at ${offer.company_name} (${offer.salary_range})` : null,
           status: 'Applied',
         })
         .select('id, app_reference_code')

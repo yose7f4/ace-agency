@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { CandidateApplicationForm } from '@/components/candidates/CandidateApplicationForm';
 import KineticGrid from '@/components/ui/kinetic-grid';
+import { SHEET_OFFERS, SheetOffer } from '@/data/sheetOffers';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -38,106 +39,52 @@ import {
   Copy,
   FileCheck2,
   PhoneCall,
-  UserCheck
+  UserCheck,
+  GraduationCap,
+  Filter,
+  RotateCcw,
+  Bus,
+  X
 } from 'lucide-react';
 
-const FALLBACK_BPO_OFFERS = [
-  {
-    id: 'f1a10001-0000-0000-0000-000000000001',
-    title: 'English US Airline Customer Service',
-    company_name: 'WGS Global',
-    language: 'English',
-    level: 'B2–C1',
-    salary_range: '22,000 - 26,000 EGP Net',
-    work_style: 'On-site',
-    shift: 'Rotational (9 hrs)',
-    location: 'New Cairo & Maadi',
-    recruiter_commission: 2200,
-    cooling_period_days: 30,
-    flag: '🇬🇧',
-    theme: 'gold',
-    description: 'Premier US Airline account. Immediate intake for Feb WGS batch. Door-to-door transportation provided across Cairo & Giza.'
-  },
-  {
-    id: 'f1a10001-0000-0000-0000-000000000002',
-    title: 'Bilingual French Customer Experience',
-    company_name: 'Teleperformance',
-    language: 'French',
-    level: 'B2+ / C1',
-    salary_range: '32,000 - 36,000 EGP Net',
-    work_style: 'Hybrid',
-    shift: 'Day & Evening Shift',
-    location: 'Sheikh Zayed & 6th of October',
-    recruiter_commission: 3200,
-    cooling_period_days: 30,
-    flag: '🇫🇷',
-    theme: 'cyan',
-    description: 'High-earning French customer care. Full health insurance, social benefits, and dedicated bus meeting points.'
-  },
-  {
-    id: 'f1a10001-0000-0000-0000-000000000003',
-    title: 'German Executive Technical Support',
-    company_name: 'Concentrix',
-    language: 'German',
-    level: 'B2+ / C1',
-    salary_range: '38,000 - 45,000 EGP Net',
-    work_style: '100% Remote / WFH',
-    shift: 'Rotational (5 Days)',
-    location: 'Work From Home (Egypt-Wide)',
-    recruiter_commission: 4500,
-    cooling_period_days: 30,
-    flag: '🇩🇪',
-    theme: 'emerald',
-    description: '100% Remote German Technical Support. Hardware provided, instant sign-on bonus, and fast-track interview pipeline.'
-  },
-  {
-    id: 'f1a10001-0000-0000-0000-000000000004',
-    title: 'Italian Travel & Luxury Booking Advisor',
-    company_name: 'Alorica',
-    language: 'Italian',
-    level: 'B2 / C1',
-    salary_range: '28,000 - 34,000 EGP Net',
-    work_style: 'On-site',
-    shift: 'Rotational (24/7)',
-    location: 'Maadi Technology Park',
-    recruiter_commission: 3000,
-    cooling_period_days: 30,
-    flag: '🇮🇹',
-    theme: 'purple',
-    description: 'Global Italian luxury travel account in Maadi Tech Park. On-site interviews with instant job offer issuance.'
-  },
-  {
-    id: 'f1a10001-0000-0000-0000-000000000005',
-    title: 'Spanish E-Commerce Resolution Lead',
-    company_name: 'Webhelp',
-    language: 'Spanish',
-    level: 'B2 / C1',
-    salary_range: '26,000 - 30,000 EGP Net',
-    work_style: 'On-site',
-    shift: 'Rotational',
-    location: 'New Cairo',
-    recruiter_commission: 2800,
-    cooling_period_days: 30,
-    flag: '🇪🇸',
-    theme: 'orange',
-    description: 'Spanish E-Commerce resolution specialist for European accounts. Free gym access and career progression.'
-  },
-  {
-    id: 'f1a10001-0000-0000-0000-000000000006',
-    title: 'English Fast-Track B1 Support',
-    company_name: 'WGS Global',
-    language: 'English',
-    level: 'B1 (Fast-Track)',
-    salary_range: '17,000 - 20,000 EGP Net',
-    work_style: 'On-site',
-    shift: 'Rotational',
-    location: 'Nasr City',
-    recruiter_commission: 1800,
-    cooling_period_days: 21,
-    flag: '🇬🇧',
-    theme: 'gold',
-    description: 'High-volume intake batch accepting intermediate B1 English. Undergraduates and high school graduates welcome!'
-  }
+const LANGUAGE_LIST = [
+  { id: 'All', label: 'All Languages', flag: '🌐' },
+  { id: 'English', label: 'English', flag: '🇬🇧' },
+  { id: 'French', label: 'French', flag: '🇫🇷' },
+  { id: 'German', label: 'German', flag: '🇩🇪' },
+  { id: 'Spanish', label: 'Spanish', flag: '🇪🇸' },
+  { id: 'Portuguese', label: 'Portuguese', flag: '🇵🇹' },
+  { id: 'Dutch', label: 'Dutch', flag: '🇳🇱' },
+  { id: 'Italian', label: 'Italian', flag: '🇮🇹' },
+  { id: 'Arabic', label: 'Arabic', flag: '🇪🇬' },
+];
+
+const GRADUATION_OPTIONS = [
+  { id: 'All', label: 'All Education Levels' },
+  { id: 'undergrads', label: '🎒 Undergrads Welcome' },
+  { id: 'graduates_only', label: '📜 Graduates Only' },
+  { id: 'dropouts_gap', label: '⚡ Dropouts & Gap Years' },
+];
+
+const LOCATION_OPTIONS = [
+  { id: 'All', label: 'All Cairo & Giza Hubs' },
+  { id: 'new_cairo', label: '📍 New Cairo & Tagamoa' },
+  { id: 'maadi', label: '📍 Maadi & Kattameya' },
+  { id: 'zayed_october', label: '📍 Smart Village, Zayed & 6th Oct' },
+  { id: 'nasr_heliopolis', label: '📍 Nasr City, Heliopolis & Sheraton' },
+  { id: 'remote', label: '📍 Remote / Alex / Other' },
+];
+
+const EXPERIENCE_OPTIONS = [
+  { id: 'All', label: 'All Experience Levels' },
+  { id: 'fresh', label: '✨ No Experience Needed (Fresh)' },
+  { id: 'experienced', label: '💼 Experienced (1+ Years)' },
+];
+
+const STATUS_OPTIONS = [
+  { id: 'All', label: 'All Vacancy Statuses' },
+  { id: 'active', label: '🟢 Active Intakes Only' },
+  { id: 'hold', label: '🟠 On Hold' }
 ];
 
 const FAQS = [
@@ -174,9 +121,14 @@ const FAQS = [
 ];
 
 export default function HomePage() {
-  const [offers, setOffers] = useState<any[]>(FALLBACK_BPO_OFFERS);
+  const [offers, setOffers] = useState<SheetOffer[]>(SHEET_OFFERS);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('All');
+  const [selectedGraduation, setSelectedGraduation] = useState<string>('All');
+  const [selectedLocation, setSelectedLocation] = useState<string>('All');
+  const [selectedExperience, setSelectedExperience] = useState<string>('All');
+  const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedOfferToApply, setSelectedOfferToApply] = useState<string | undefined>(undefined);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [faqCategory, setFaqCategory] = useState<'all' | 'candidates' | 'recruiters'>('all');
 
@@ -189,31 +141,52 @@ export default function HomePage() {
         const supabase = createBrowserClient();
         const { data, error } = await supabase
           .from('offers')
-          .select('id, title, company_name, language, level, salary_range, work_style, location, shift, recruiter_commission, cooling_period_days, description')
+          .select('*')
           .eq('status', 'active')
           .order('company_name');
 
         if (data && data.length > 0) {
-          // Merge with presentation flags
-          const formatted = data.map((item, idx) => {
-            const l = (item.language || '').toLowerCase();
-            let flag = '🇬🇧';
-            let theme = 'gold';
-            if (l.includes('german')) { flag = '🇩🇪'; theme = 'emerald'; }
-            else if (l.includes('french')) { flag = '🇫🇷'; theme = 'cyan'; }
-            else if (l.includes('italian')) { flag = '🇮🇹'; theme = 'purple'; }
-            else if (l.includes('spanish')) { flag = '🇪🇸'; theme = 'orange'; }
-
+          const mapped: SheetOffer[] = data.map((item) => {
+            const match = SHEET_OFFERS.find(s => s.id === item.id || s.title.toLowerCase() === item.title.toLowerCase());
+            if (match) return match;
             return {
-              ...item,
-              flag,
-              theme
+              id: item.id,
+              slug: item.id,
+              company_name: item.company_name,
+              company_full: item.company_name,
+              title: item.title,
+              status: item.status === 'hold' ? 'On Hold' : 'Active',
+              location: item.location,
+              location_category: 'other',
+              work_style: item.work_style,
+              grad_status_raw: item.grad_status || 'Any',
+              grad_label: item.grad_status || 'Grads & Undergrads',
+              allows_undergrads: (item.grad_status || '').toLowerCase().includes('undergrad'),
+              allows_dropouts: (item.grad_status || '').toLowerCase().includes('drop'),
+              graduates_only: (item.grad_status || '').toLowerCase().includes('only'),
+              languages: [item.language],
+              primary_language: item.language,
+              level: item.level,
+              language_raw: `${item.language} ${item.level}`,
+              experience_raw: item.experience_required ? 'Experience required' : 'No experience needed',
+              experience_category: item.experience_required ? 'experienced' : 'fresh',
+              min_age: String(item.min_age || 18),
+              max_age: String(item.max_age || 45),
+              salary_range: item.salary_range || 'Negotiable',
+              bonus_details: item.benefits || '',
+              transport: item.transport || 'Provided',
+              interview_process: '',
+              shift: item.shift,
+              notes: item.requirements || '',
+              flag: '🌐',
+              theme: 'gold',
+              description: item.description || ''
             };
           });
-          setOffers(formatted);
+          setOffers(mapped);
         }
       } catch (err) {
-        console.error('Failed to fetch live offers, using fallback BPO accounts', err);
+        console.error('Failed to fetch live offers from DB, keeping official sheet catalog', err);
       }
     }
 
@@ -225,37 +198,110 @@ export default function HomePage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const handleCopyPost = (offer: any) => {
+  const handleCopyPost = (offer: SheetOffer) => {
     const applyUrl = `${window.location.origin}/apply/${offer.id}`;
-    const text = `🔥 *NEW VACANCY ALERT — ACE RECRUITMENT AGENCY* 🔥\n\n` +
+    const text = `🔥 *VERIFIED VACANCY ALERT — ACE RECRUITMENT AGENCY* 🔥\n\n` +
       `💼 *Position:* ${offer.title}\n` +
-      `🏢 *Account:* ${offer.company_name}\n` +
-      `🗣 *Language:* ${offer.language} (${offer.level || 'B2'})\n` +
+      `🏢 *Account / Employer:* ${offer.company_full}\n` +
+      `🗣 *Language:* ${offer.primary_language} (${offer.level})\n` +
+      `🎓 *Education:* ${offer.grad_status_raw || offer.grad_label}\n` +
       `📍 *Location:* ${offer.location} (${offer.work_style})\n` +
-      `⏰ *Shift:* ${offer.shift || 'Rotational'}\n` +
-      `💰 *Net Salary:* ${offer.salary_range}\n` +
-      `🚌 *Transport:* Free Door-to-Door Cab / Meeting Points\n` +
-      `✅ *Zero Placement Fees*\n\n` +
-      `👇 *Apply now directly:* ${applyUrl}`;
+      `💼 *Experience:* ${offer.experience_raw || (offer.experience_category === 'fresh' ? 'No experience needed' : 'Experience required')}\n` +
+      `⏰ *Shift:* ${offer.shift || 'Rotational (5 Days)'}\n` +
+      `💰 *Compensation:* ${offer.salary_range}\n` +
+      (offer.bonus_details ? `🎁 *Bonuses / Commissions:* ${offer.bonus_details}\n` : '') +
+      (offer.transport && offer.transport !== 'Not stated' ? `🚌 *Transit:* ${offer.transport}\n` : '') +
+      `✅ *Zero Placement Fees — 100% Free Candidate Service*\n\n` +
+      `👇 *Fast-Track Direct Apply:* ${applyUrl}`;
 
     navigator.clipboard.writeText(text);
     showToast(`Vacancy template for ${offer.company_name} copied!`);
   };
 
-  // Filter offers by language and search query
-  const filteredOffers = offers.filter((o) => {
-    const matchesLang =
-      selectedLanguage === 'All' ||
-      (o.language && o.language.toLowerCase().includes(selectedLanguage.toLowerCase()));
+  const handleApplyClick = (offerId: string) => {
+    setSelectedOfferToApply(offerId);
+    const applySection = document.getElementById('apply-now');
+    if (applySection) {
+      applySection.scrollIntoView({ behavior: 'smooth' });
+    }
+    showToast('Opportunity selected! Complete your 60-second application below.');
+  };
 
-    const matchesSearch =
-      !searchQuery.trim() ||
-      o.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (o.location && o.location.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Filter offers by language, graduation status, location, experience, and search query
+  const filteredOffers = useMemo(() => {
+    return offers.filter((o) => {
+      // 1. Language Filter
+      const matchesLang =
+        selectedLanguage === 'All' ||
+        (o.languages && o.languages.includes(selectedLanguage)) ||
+        (o.primary_language && o.primary_language.toLowerCase() === selectedLanguage.toLowerCase());
 
-    return matchesLang && matchesSearch;
-  });
+      // 2. Graduation Filter
+      let matchesGrad = true;
+      if (selectedGraduation === 'undergrads') {
+        matchesGrad = o.allows_undergrads === true;
+      } else if (selectedGraduation === 'graduates_only') {
+        matchesGrad = o.graduates_only === true;
+      } else if (selectedGraduation === 'dropouts_gap') {
+        matchesGrad = o.allows_dropouts === true;
+      }
+
+      // 3. Location Filter
+      let matchesLoc = true;
+      if (selectedLocation !== 'All') {
+        matchesLoc = o.location_category === selectedLocation;
+      }
+
+      // 4. Experience Filter
+      let matchesExp = true;
+      if (selectedExperience === 'fresh') {
+        matchesExp = o.experience_category === 'fresh';
+      } else if (selectedExperience === 'experienced') {
+        matchesExp = o.experience_category === 'experienced';
+      }
+
+      // 5. Status Filter
+      let matchesStatus = true;
+      if (selectedStatus === 'active') {
+        matchesStatus = o.status === 'Active';
+      } else if (selectedStatus === 'hold') {
+        matchesStatus = o.status === 'On Hold';
+      }
+
+      // 6. Search Query Filter
+      const q = searchQuery.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        o.title.toLowerCase().includes(q) ||
+        o.company_name.toLowerCase().includes(q) ||
+        o.company_full.toLowerCase().includes(q) ||
+        o.location.toLowerCase().includes(q) ||
+        o.salary_range.toLowerCase().includes(q) ||
+        o.shift.toLowerCase().includes(q) ||
+        o.notes.toLowerCase().includes(q) ||
+        o.grad_status_raw.toLowerCase().includes(q) ||
+        o.languages.some(l => l.toLowerCase().includes(q));
+
+      return matchesLang && matchesGrad && matchesLoc && matchesExp && matchesStatus && matchesSearch;
+    });
+  }, [offers, selectedLanguage, selectedGraduation, selectedLocation, selectedExperience, selectedStatus, searchQuery]);
+
+  const isAnyFilterActive =
+    selectedLanguage !== 'All' ||
+    selectedGraduation !== 'All' ||
+    selectedLocation !== 'All' ||
+    selectedExperience !== 'All' ||
+    selectedStatus !== 'All' ||
+    searchQuery.trim() !== '';
+
+  const handleResetFilters = () => {
+    setSelectedLanguage('All');
+    setSelectedGraduation('All');
+    setSelectedLocation('All');
+    setSelectedExperience('All');
+    setSelectedStatus('All');
+    setSearchQuery('');
+  };
 
   return (
     <KineticGrid globalColor="default" className="min-h-screen flex flex-col bg-[#05070D] text-slate-100 selection:bg-amber-400/30 selection:text-amber-200 relative overflow-x-hidden">
@@ -495,40 +541,84 @@ export default function HomePage() {
       {/* 3. LUXURY BOARDING-PASS VACANCY MARKETPLACE                                */}
       {/* ========================================================================= */}
       <section id="vacancies" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full border-t border-white/10 relative z-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 text-xs font-bold mb-3 font-mono">
               <Sparkles className="w-3.5 h-3.5" />
-              HOT FEBRUARY INTAKES
+              OFFICIAL CORPORATE VACANCY DIRECTORY • 66 VACANCIES
             </div>
             <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
               Verified Corporate Vacancies
             </h2>
             <p className="text-sm text-slate-300 mt-2 max-w-xl">
-              Salaries verified with corporate HR. Door-to-door transit, medical coverage, and immediate interview slots.
+              Real enterprise intakes across Cairo & Giza: Concentrix, Teleperformance, TTEC, Enable, Xceed, and more. Filter by graduation status, language, and hub.
             </p>
           </div>
 
-          {/* Language Filter Tabs with Live Counters */}
-          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-white/[0.04] border border-white/10 self-start md:self-auto overflow-x-auto backdrop-blur-xl">
-            {['All', 'English', 'German', 'French', 'Italian', 'Spanish'].map((lang) => {
-              const count = lang === 'All' 
-                ? offers.length 
-                : offers.filter(o => o.language && o.language.toLowerCase().includes(lang.toLowerCase())).length;
+          <div className="flex items-center gap-3 self-start md:self-auto">
+            <span className="px-3.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-xs font-mono text-slate-300">
+              Showing <span className="text-amber-400 font-bold">{filteredOffers.length}</span> of {offers.length} Vacancies
+            </span>
+            {isAnyFilterActive && (
+              <button
+                onClick={handleResetFilters}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-300 hover:bg-rose-500/20 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Reset all filters"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset Filters</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ======================= COMPREHENSIVE FILTER BAR ======================= */}
+        <div className="mb-10 p-5 rounded-3xl bg-white/[0.02] border border-white/10 backdrop-blur-2xl space-y-4 shadow-2xl">
+          {/* Row 1: Search Bar & Live Counter */}
+          <div className="flex flex-col sm:flex-row gap-3 items-center">
+            <div className="relative flex-1 w-full">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by position, company (Concentrix, TP...), location, or keyword..."
+                className="w-full bg-[#080C14] border border-white/10 rounded-2xl pl-10 pr-10 py-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/60 transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Row 2: Language Selector Scroll Bar */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            {LANGUAGE_LIST.map((lang) => {
+              const count = lang.id === 'All'
+                ? offers.length
+                : offers.filter(o => (o.languages && o.languages.includes(lang.id)) || (o.primary_language && o.primary_language.toLowerCase() === lang.id.toLowerCase())).length;
+
+              const isSelected = selectedLanguage === lang.id;
 
               return (
                 <button
-                  key={lang}
-                  onClick={() => setSelectedLanguage(lang)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                    selectedLanguage === lang
-                      ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20'
-                      : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                  key={lang.id}
+                  onClick={() => setSelectedLanguage(lang.id)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 border ${
+                    isSelected
+                      ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md shadow-amber-400/25 font-black'
+                      : 'bg-white/[0.03] text-slate-400 hover:text-white border-white/5 hover:border-white/15 hover:bg-white/[0.06]'
                   }`}
                 >
-                  <span>{lang}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                    selectedLanguage === lang ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
+                  <span>{lang.flag}</span>
+                  <span>{lang.label}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                    isSelected ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
                   }`}>
                     {count}
                   </span>
@@ -536,80 +626,303 @@ export default function HomePage() {
               );
             })}
           </div>
-        </div>
 
-        {/* Boarding-Pass Vacancy Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredOffers.map((offer) => {
-            return (
-              <div
-                key={offer.id}
-                className="rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-[#0F1626]/90 to-[#070A12]/95 border border-white/10 hover:border-amber-400/40 transition-all shadow-xl hover:shadow-2xl relative overflow-hidden flex flex-col justify-between group"
+          {/* Row 3: Multi-Faceted Selectors (Graduation Status, Location, Experience, Intake Status) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-white/5">
+            {/* Graduation Status Filter */}
+            <div>
+              <label className="block text-[11px] font-mono text-slate-400 mb-1.5 flex items-center gap-1.5 font-bold uppercase tracking-wider">
+                <GraduationCap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Education / Graduation</span>
+              </label>
+              <select
+                value={selectedGraduation}
+                onChange={(e) => setSelectedGraduation(e.target.value)}
+                className="w-full bg-[#080C14] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400/60 cursor-pointer"
               >
-                <div>
-                  {/* Top Bar: Language Flag & Account Tag */}
-                  <div className="flex items-center justify-between gap-2 mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{offer.flag || '🇬🇧'}</span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono bg-white/[0.06] text-white border border-white/10">
-                        {offer.language} ({offer.level})
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
-                      {offer.work_style}
-                    </span>
-                  </div>
+                {GRADUATION_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                  {/* Title & Account */}
-                  <h3 className="text-lg sm:text-xl font-bold text-white group-hover:text-amber-300 transition-colors">
-                    {offer.title}
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                    <span className="text-slate-200 font-semibold">{offer.company_name}</span> &bull; <span>{offer.location}</span>
-                  </p>
+            {/* Location / Hub Filter */}
+            <div>
+              <label className="block text-[11px] font-mono text-slate-400 mb-1.5 flex items-center gap-1.5 font-bold uppercase tracking-wider">
+                <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Location / Hub</span>
+              </label>
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="w-full bg-[#080C14] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400/60 cursor-pointer"
+              >
+                {LOCATION_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                  {/* Compensation Highlight Card */}
-                  <div className="mt-5 p-3.5 rounded-2xl bg-black/40 border border-white/5 space-y-1.5">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-[11px] font-mono text-slate-400 uppercase">Net Monthly Compensation</span>
-                    </div>
-                    <span className="text-xl font-black text-amber-400 font-mono tracking-tight block">
-                      {offer.salary_range}
-                    </span>
-                    <span className="text-[11px] text-slate-300 block">
-                      Shift: {offer.shift || 'Rotational (5 Days)'}
-                    </span>
-                  </div>
+            {/* Experience Filter */}
+            <div>
+              <label className="block text-[11px] font-mono text-slate-400 mb-1.5 flex items-center gap-1.5 font-bold uppercase tracking-wider">
+                <Briefcase className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Experience Level</span>
+              </label>
+              <select
+                value={selectedExperience}
+                onChange={(e) => setSelectedExperience(e.target.value)}
+                className="w-full bg-[#080C14] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-400/60 cursor-pointer"
+              >
+                {EXPERIENCE_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                  {/* Description snippet */}
-                  <p className="text-xs text-slate-300 mt-4 leading-relaxed line-clamp-2">
-                    {offer.description}
-                  </p>
-                </div>
+            {/* Status Filter */}
+            <div>
+              <label className="block text-[11px] font-mono text-slate-400 mb-1.5 flex items-center gap-1.5 font-bold uppercase tracking-wider">
+                <Filter className="w-3.5 h-3.5 text-purple-400" />
+                <span>Intake Status</span>
+              </label>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="w-full bg-[#080C14] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-purple-400/60 cursor-pointer"
+              >
+                {STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-                {/* Bottom Actions: Apply & Share */}
-                <div className="mt-6 pt-5 border-t border-white/10 flex items-center gap-2">
-                  <a
-                    href="#apply-now"
-                    className="flex-1 py-2.5 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs tracking-wide transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
-                  >
-                    <span>Apply for Vacancy</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </a>
+          {/* Row 4: Active Filter Chips */}
+          {isAnyFilterActive && (
+            <div className="pt-2 border-t border-white/5 flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-slate-400 text-[11px] font-mono">Active Filters:</span>
 
-                  <button
-                    onClick={() => handleCopyPost(offer)}
-                    className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-amber-300 border border-white/10 transition-colors cursor-pointer"
-                    title="Copy 1-Click WhatsApp Blast Message"
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+              {selectedLanguage !== 'All' && (
+                <button
+                  onClick={() => setSelectedLanguage('All')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 text-[11px] font-medium hover:bg-amber-400/25 transition-colors cursor-pointer"
+                >
+                  <span>Lang: {selectedLanguage}</span>
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+
+              {selectedGraduation !== 'All' && (
+                <button
+                  onClick={() => setSelectedGraduation('All')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-400/15 text-emerald-300 border border-emerald-400/30 text-[11px] font-medium hover:bg-emerald-400/25 transition-colors cursor-pointer"
+                >
+                  <span>Education: {GRADUATION_OPTIONS.find(o => o.id === selectedGraduation)?.label}</span>
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+
+              {selectedLocation !== 'All' && (
+                <button
+                  onClick={() => setSelectedLocation('All')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-400/15 text-cyan-300 border border-cyan-400/30 text-[11px] font-medium hover:bg-cyan-400/25 transition-colors cursor-pointer"
+                >
+                  <span>Location: {LOCATION_OPTIONS.find(o => o.id === selectedLocation)?.label}</span>
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+
+              {selectedExperience !== 'All' && (
+                <button
+                  onClick={() => setSelectedExperience('All')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-400/15 text-purple-300 border border-purple-400/30 text-[11px] font-medium hover:bg-purple-400/25 transition-colors cursor-pointer"
+                >
+                  <span>Exp: {EXPERIENCE_OPTIONS.find(o => o.id === selectedExperience)?.label}</span>
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+
+              {selectedStatus !== 'All' && (
+                <button
+                  onClick={() => setSelectedStatus('All')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-400/15 text-slate-300 border border-slate-400/30 text-[11px] font-medium hover:bg-slate-400/25 transition-colors cursor-pointer"
+                >
+                  <span>Status: {STATUS_OPTIONS.find(o => o.id === selectedStatus)?.label}</span>
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+
+              {searchQuery.trim() !== '' && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-400/15 text-slate-300 border border-slate-400/30 text-[11px] font-medium hover:bg-slate-400/25 transition-colors cursor-pointer"
+                >
+                  <span>Keyword: "{searchQuery}"</span>
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+
+              <button
+                onClick={handleResetFilters}
+                className="text-amber-400 hover:text-amber-300 text-[11px] font-bold underline ml-1 cursor-pointer"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Empty State when no results match */}
+        {filteredOffers.length === 0 ? (
+          <div className="py-20 px-6 rounded-3xl bg-white/[0.02] border border-white/10 text-center flex flex-col items-center justify-center max-w-xl mx-auto backdrop-blur-xl">
+            <div className="w-14 h-14 rounded-2xl bg-amber-400/10 border border-amber-400/25 flex items-center justify-center text-amber-400 mb-4">
+              <Compass className="w-7 h-7" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">No Vacancies Match Your Filters</h3>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-md leading-relaxed mb-6">
+              We couldn't find any positions matching your selected combination of filters. Try adjusting your education status, language, or location filter to see more results.
+            </p>
+            <button
+              onClick={handleResetFilters}
+              className="px-6 py-3 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs tracking-wide transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-amber-400/20"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset All Filters & Show 66 Vacancies</span>
+            </button>
+          </div>
+        ) : (
+          /* Boarding-Pass Vacancy Grid */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredOffers.map((offer) => {
+              return (
+                <div
+                  key={offer.id}
+                  className="rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-[#0F1626]/90 via-[#0C111E]/95 to-[#070A12]/98 border border-white/10 hover:border-amber-400/40 transition-all duration-300 shadow-xl hover:shadow-2xl relative overflow-hidden flex flex-col justify-between group"
+                >
+                  <div>
+                    {/* Top Bar: Language Flag & Education Pill & Status */}
+                    <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xl">{offer.flag || '🇬🇧'}</span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono bg-white/[0.06] text-white border border-white/10">
+                          {offer.primary_language} ({offer.level})
+                        </span>
+                        {offer.allows_undergrads ? (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                            🎓 Undergrads Welcome
+                          </span>
+                        ) : offer.graduates_only ? (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+                            🎓 Graduates Only
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+                            🎓 {offer.grad_label}
+                          </span>
+                        )}
+                      </div>
+
+                      {offer.status === 'On Hold' ? (
+                        <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/25">
+                          On Hold
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-md border border-emerald-400/25">
+                          Active
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Title & Employer Account */}
+                    <h3 className="text-lg sm:text-xl font-bold text-white group-hover:text-amber-300 transition-colors leading-snug line-clamp-2">
+                      {offer.title}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-2 flex items-center gap-1.5 flex-wrap">
+                      <Building2 className="w-3.5 h-3.5 text-amber-400/80 shrink-0" />
+                      <span className="text-slate-200 font-semibold">{offer.company_full}</span>
+                      <span className="text-slate-600">&bull;</span>
+                      <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span className="text-slate-300 line-clamp-1">{offer.location}</span>
+                    </p>
+
+                    {/* Compensation Highlight Card */}
+                    <div className="mt-5 p-4 rounded-2xl bg-black/50 border border-white/5 space-y-2">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+                          Net / Gross Compensation
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400 uppercase">
+                          {offer.work_style}
+                        </span>
+                      </div>
+                      <span className="text-lg sm:text-xl font-black text-amber-400 font-mono tracking-tight block">
+                        {offer.salary_range}
+                      </span>
+                      {offer.bonus_details && (
+                        <div className="text-[11px] text-amber-200/90 flex items-start gap-1.5 font-medium pt-1 border-t border-white/5">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                          <span className="line-clamp-2">{offer.bonus_details}</span>
+                        </div>
+                      )}
+                      <div className="pt-2 border-t border-white/5 space-y-1 text-[11px] text-slate-300">
+                        <div className="flex items-center gap-1.5">
+                          <Briefcase className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span className="truncate">{offer.experience_raw || (offer.experience_category === 'fresh' ? 'No experience needed' : 'Experience required')}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span className="truncate">Shift: {offer.shift || 'Rotational (5 Days)'}</span>
+                        </div>
+                        {offer.transport && offer.transport !== 'Not stated' && (
+                          <div className="flex items-center gap-1.5 text-cyan-300">
+                            <Bus className="w-3 h-3 text-cyan-400 shrink-0" />
+                            <span className="truncate">{offer.transport}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Interview details snippet */}
+                    {offer.interview_process && offer.interview_process !== 'Not stated' && (
+                      <div className="mt-3 text-[11px] text-slate-400 flex items-start gap-1.5">
+                        <UserCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+                        <span className="line-clamp-2">{offer.interview_process}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bottom Actions: Apply & Share */}
+                  <div className="mt-6 pt-5 border-t border-white/10 flex items-center gap-2">
+                    <button
+                      onClick={() => handleApplyClick(offer.id)}
+                      className="flex-1 py-2.5 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs tracking-wide transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                    >
+                      <span>Apply for Vacancy</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      onClick={() => handleCopyPost(offer)}
+                      className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-amber-300 border border-white/10 transition-colors cursor-pointer"
+                      title="Copy 1-Click WhatsApp Blast Message"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* ========================================================================= */}
@@ -635,7 +948,7 @@ export default function HomePage() {
             <span>Loading Application Gateway...</span>
           </div>
         }>
-          <CandidateApplicationForm />
+          <CandidateApplicationForm initialOfferId={selectedOfferToApply} />
         </Suspense>
       </section>
 
