@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { CandidateApplicationForm } from '@/components/candidates/CandidateApplicationForm';
+import KineticGrid from '@/components/ui/kinetic-grid';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -276,7 +277,7 @@ export default function HomePage() {
   const annualProjection = totalCombined * 12;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#05070D] text-slate-100 selection:bg-amber-400/30 selection:text-amber-200 relative overflow-x-hidden">
+    <KineticGrid globalColor="default" className="min-h-screen flex flex-col bg-[#05070D] text-slate-100 selection:bg-amber-400/30 selection:text-amber-200 relative overflow-x-hidden">
       {/* Background radial spotlights & subtle noise */}
       <div className="pointer-events-none fixed inset-0 z-0 opacity-40">
         <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1000px] h-[550px] bg-gradient-to-b from-amber-500/20 via-cyan-500/10 to-transparent blur-[140px]" />
@@ -1021,6 +1022,6 @@ export default function HomePage() {
           <p>© {new Date().getFullYear()} ACE Agency. All rights reserved. Zero Candidate Fees.</p>
         </div>
       </footer>
-    </div>
+    </KineticGrid>
   );
 }
