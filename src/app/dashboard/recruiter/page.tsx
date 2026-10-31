@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { createBrowserClient } from '@/lib/supabase/client';
 import type { Offer, Candidate, Profile } from '@/lib/supabase/types';
+import { ForbiddenShield } from '@/components/auth/ForbiddenShield';
 import { 
   Briefcase, 
   Copy, 
@@ -34,6 +35,7 @@ export default function RecruiterDashboardPage() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'marketplace' | 'candidates'>('marketplace');
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -56,6 +58,7 @@ export default function RecruiterDashboardPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        setIsAuthorized(false);
         setLoading(false);
         return;
       }
@@ -67,29 +70,35 @@ export default function RecruiterDashboardPage() {
         .eq('id', user.id)
         .single();
 
-      if (userProfile) {
-        setProfile(userProfile as Profile);
-
-        // 2. Fetch Active Offers for the Marketplace
-        const { data: activeOffers } = await supabase
-          .from('offers')
-          .select('*')
-          .eq('status', 'active')
-          .order('created_at', { ascending: false });
-
-        if (activeOffers) setOffers(activeOffers as Offer[]);
-
-        // 3. STRICT ISOLATION: Fetch only candidates where candidates.recruiter_id == user.id
-        const { data: myCandidates } = await supabase
-          .from('candidates')
-          .select('*')
-          .eq('recruiter_id', userProfile.id)
-          .order('created_at', { ascending: false });
-
-        if (myCandidates) setCandidates(myCandidates as Candidate[]);
+      if (!userProfile || !userProfile.is_active) {
+        setIsAuthorized(false);
+        setLoading(false);
+        return;
       }
+
+      setIsAuthorized(true);
+      setProfile(userProfile as Profile);
+
+      // 2. Fetch Active Offers for the Marketplace
+      const { data: activeOffers } = await supabase
+        .from('offers')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (activeOffers) setOffers(activeOffers as Offer[]);
+
+      // 3. STRICT ISOLATION: Fetch only candidates where candidates.recruiter_id == user.id
+      const { data: myCandidates } = await supabase
+        .from('candidates')
+        .select('*')
+        .eq('recruiter_id', userProfile.id)
+        .order('created_at', { ascending: false });
+
+      if (myCandidates) setCandidates(myCandidates as Candidate[]);
     } catch (err) {
       console.error('Error fetching recruiter dashboard data', err);
+      setIsAuthorized(false);
     } finally {
       setLoading(false);
     }
@@ -155,6 +164,26 @@ export default function RecruiterDashboardPage() {
     .reduce((acc, c) => acc + (c.commission_amount || 0), 0);
 
   const totalHired = candidates.filter(c => ['Hired', 'Batch_Started', 'Commission_Unlocked', 'Commission_Paid'].includes(c.status)).length;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#05070D]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl border-2 border-amber-500/30 border-t-amber-400 animate-spin" />
+          <p className="text-xs font-mono text-slate-400 tracking-wider uppercase">Verifying Recruiter Credentials...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAuthorized === false) {
+    return (
+      <ForbiddenShield 
+        requiredRole="Affiliate Recruiter" 
+        description="This operational terminal requires an active Affiliate Recruiter or Admin account. Access has been locked by ACE Agency zero-trust security."
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#090d16]">

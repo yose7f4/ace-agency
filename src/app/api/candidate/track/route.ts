@@ -39,7 +39,11 @@ export async function POST(request: NextRequest) {
         grad_status,
         created_at,
         offer_id,
-        recruiter_id
+        recruiter_id,
+        national_id,
+        military_status,
+        calling_period,
+        batch_name
       `)
       .or(`phone.eq.${localPhone},phone.eq.${intlPhone},phone.eq.${cleanPhone},whatsapp.eq.${localPhone},whatsapp.eq.${intlPhone}`)
       .order('created_at', { ascending: false });
@@ -121,6 +125,10 @@ export async function POST(request: NextRequest) {
         voiceNoteUrl: candidate.voice_note_url,
         englishLevel: candidate.english_level,
         gradStatus: candidate.grad_status,
+        nationalId: candidate.national_id,
+        militaryStatus: candidate.military_status,
+        callingPeriod: candidate.calling_period,
+        batchName: candidate.batch_name,
         createdAt: candidate.created_at,
         offer,
         coordinator: {

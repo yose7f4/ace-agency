@@ -115,7 +115,11 @@ CREATE TABLE IF NOT EXISTS public.candidates (
   whatsapp TEXT NOT NULL,
   age INTEGER,
   residence TEXT,             -- Area / City of residence
-  grad_status TEXT,           -- 'Graduate', 'Undergrad', etc.
+  grad_status TEXT,           -- 'Graduate', 'Undergrad', 'High School', 'Drop-out', etc.
+  national_id VARCHAR(14),    -- Egyptian National ID (14 digits)
+  military_status TEXT,       -- 'Completed', 'Exempted', 'Postponed', 'Female / N/A'
+  calling_period TEXT,        -- Preferred calling window ('Morning', 'Afternoon', 'Evening')
+  batch_name TEXT,            -- e.g. 'Feb WGS Batch'
   voice_note_url TEXT,        -- Zero-Storage Voice Notes: Vocaroo.com URL
   cv_url TEXT,                -- Optional portfolio/CV link
   experience_years INTEGER NOT NULL DEFAULT 0 CHECK (experience_years >= 0),

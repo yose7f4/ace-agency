@@ -39,6 +39,10 @@ interface CandidateTrackingData {
   voiceNoteUrl: string | null;
   englishLevel: string | null;
   gradStatus: string | null;
+  nationalId?: string | null;
+  militaryStatus?: string | null;
+  callingPeriod?: string | null;
+  batchName?: string | null;
   createdAt: string;
   offer: {
     title: string;
@@ -278,6 +282,31 @@ function CandidateTrackerContent() {
                   <span>English: <strong className="text-amber-300 font-bold">{candidate.englishLevel || 'B2'}</strong></span>
                   <span>&bull;</span>
                   <span>Applied: <strong className="text-slate-300">{new Date(candidate.createdAt).toLocaleDateString()}</strong></span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
+                  {candidate.nationalId && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 font-mono text-[11px]">
+                      <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                      ID: {candidate.nationalId.slice(0, 5)}••••••{candidate.nationalId.slice(-3)}
+                    </span>
+                  )}
+                  {candidate.militaryStatus && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 text-[11px]">
+                      Military: <strong className="text-white">{candidate.militaryStatus}</strong>
+                    </span>
+                  )}
+                  {candidate.callingPeriod && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-400/10 border border-amber-400/20 text-amber-300 text-[11px]">
+                      <Clock className="w-3 h-3 text-amber-400" />
+                      Call Window: <strong className="text-amber-200 capitalize">{candidate.callingPeriod}</strong>
+                    </span>
+                  )}
+                  {candidate.batchName && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-400/10 border border-cyan-400/20 text-cyan-300 text-[11px]">
+                      Batch: <strong className="text-cyan-200">{candidate.batchName}</strong>
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -541,14 +570,18 @@ function CandidateTrackerContent() {
 
 export default function CandidateTrackingPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#070a12] bg-grid-pattern text-slate-100">
+    <div className="min-h-screen flex flex-col bg-[#05070D] text-slate-100 relative overflow-hidden selection:bg-amber-400/30 selection:text-amber-200">
+      {/* Ambient background glows */}
+      <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-gradient-to-b from-amber-500/10 via-cyan-500/5 to-transparent blur-3xl opacity-70" />
+      <div className="pointer-events-none absolute bottom-0 right-0 w-[500px] h-[350px] bg-cyan-500/5 blur-3xl" />
+
       <Navbar />
-      <main className="flex-1 py-10 sm:py-16 px-4 sm:px-6 lg:px-8">
+      <main className="flex-1 py-10 sm:py-16 px-4 sm:px-6 lg:px-8 relative z-10">
         <Suspense fallback={<div className="text-center py-12 text-slate-400 text-xs">Loading Candidate Tracker...</div>}>
           <CandidateTrackerContent />
         </Suspense>
       </main>
-      <footer className="border-t border-slate-900 bg-[#05070d] py-6 px-4 text-center text-xs text-slate-500">
+      <footer className="border-t border-white/[0.08] bg-[#05070D]/90 backdrop-blur-xl py-6 px-4 text-center text-xs text-slate-500 relative z-10">
         <p>© {new Date().getFullYear()} ACE Recruitment Agency &bull; Candidate Self-Service Tracking Portal</p>
       </footer>
     </div>

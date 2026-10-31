@@ -6,6 +6,7 @@ import { createBrowserClient } from '@/lib/supabase/client';
 import type { Candidate, Profile, Offer, CandidateStatus } from '@/lib/supabase/types';
 import { VocarooPlayer } from '@/components/voice/VocarooPlayer';
 import { WhatsAppButtons } from '@/components/candidates/WhatsAppButtons';
+import { ForbiddenShield } from '@/components/auth/ForbiddenShield';
 import { 
   Users, 
   Copy, 
@@ -33,10 +34,12 @@ export default function TeamLeaderDashboardPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRecruiterFilter, setSelectedRecruiterFilter] = useState('all');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
+  const [selectedBatchFilter, setSelectedBatchFilter] = useState('all');
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Scheduling modal state
@@ -46,6 +49,10 @@ export default function TeamLeaderDashboardPage() {
   // Batch start modal state
   const [batchCandidate, setBatchCandidate] = useState<Candidate | null>(null);
   const [batchDate, setBatchDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Rejection reason modal state (Meeting addition)
+  const [rejectionCandidate, setRejectionCandidate] = useState<Candidate | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('Pronunciation / Accent Issue');
 
   const supabase = createBrowserClient();
 
@@ -58,6 +65,7 @@ export default function TeamLeaderDashboardPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        setIsAuthorized(false);
         setLoading(false);
         return;
       }
@@ -69,35 +77,41 @@ export default function TeamLeaderDashboardPage() {
         .eq('id', user.id)
         .single();
 
-      if (leaderProfile) {
-        setProfile(leaderProfile as Profile);
-
-        // 2. STRICT ISOLATION: Fetch only Recruiters belonging to this Team Leader
-        const { data: recruiters } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('team_leader_id', leaderProfile.id);
-
-        if (recruiters) setTeamRecruiters(recruiters as Profile[]);
-
-        // 3. STRICT ISOLATION: Fetch only Candidates where candidates.team_leader_id == leader.id
-        const { data: teamCandidates } = await supabase
-          .from('candidates')
-          .select('*')
-          .eq('team_leader_id', leaderProfile.id)
-          .order('created_at', { ascending: false });
-
-        if (teamCandidates) setCandidates(teamCandidates as Candidate[]);
-
-        // 4. Fetch offers for title resolution
-        const { data: allOffers } = await supabase
-          .from('offers')
-          .select('*');
-
-        if (allOffers) setOffers(allOffers as Offer[]);
+      if (!leaderProfile || (leaderProfile.role !== 'team_leader' && leaderProfile.role !== 'admin') || !leaderProfile.is_active) {
+        setIsAuthorized(false);
+        setLoading(false);
+        return;
       }
+
+      setIsAuthorized(true);
+      setProfile(leaderProfile as Profile);
+
+      // 2. STRICT ISOLATION: Fetch only Recruiters belonging to this Team Leader
+      const { data: recruiters } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('team_leader_id', leaderProfile.id);
+
+      if (recruiters) setTeamRecruiters(recruiters as Profile[]);
+
+      // 3. STRICT ISOLATION: Fetch only Candidates where candidates.team_leader_id == leader.id
+      const { data: teamCandidates } = await supabase
+        .from('candidates')
+        .select('*')
+        .eq('team_leader_id', leaderProfile.id)
+        .order('created_at', { ascending: false });
+
+      if (teamCandidates) setCandidates(teamCandidates as Candidate[]);
+
+      // 4. Fetch offers for title resolution
+      const { data: allOffers } = await supabase
+        .from('offers')
+        .select('*');
+
+      if (allOffers) setOffers(allOffers as Offer[]);
     } catch (err) {
       console.error('Error loading leader dashboard data', err);
+      setIsAuthorized(false);
     } finally {
       setLoading(false);
     }
@@ -131,6 +145,14 @@ export default function TeamLeaderDashboardPage() {
         }
       }
 
+      if (newStatus === 'Rejected') {
+        // Open rejection reason modal (Meeting addition)
+        if (candidate) {
+          setRejectionCandidate(candidate);
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from('candidates')
         .update({ status: newStatus })
@@ -142,6 +164,34 @@ export default function TeamLeaderDashboardPage() {
       showNotify('success', `Candidate status updated to ${newStatus}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to update candidate status';
+      showNotify('error', msg);
+    }
+  };
+
+  const handleConfirmRejection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectionCandidate) return;
+
+    try {
+      const { error } = await supabase
+        .from('candidates')
+        .update({ 
+          status: 'Rejected',
+          rejection_reason: rejectionReason
+        })
+        .eq('id', rejectionCandidate.id);
+
+      if (error) throw error;
+
+      setCandidates(prev => prev.map(c => 
+        c.id === rejectionCandidate.id 
+          ? { ...c, status: 'Rejected', rejection_reason: rejectionReason } 
+          : c
+      ));
+      showNotify('success', `Candidate rejected: ${rejectionReason}`);
+      setRejectionCandidate(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error recording rejection';
       showNotify('error', msg);
     }
   };
@@ -220,9 +270,30 @@ export default function TeamLeaderDashboardPage() {
 
     const matchesRecruiter = selectedRecruiterFilter === 'all' || c.recruiter_id === selectedRecruiterFilter;
     const matchesStatus = selectedStatusFilter === 'all' || c.status === selectedStatusFilter;
+    const matchesBatch = selectedBatchFilter === 'all' || (c.batch_name && c.batch_name.toLowerCase().includes(selectedBatchFilter.toLowerCase()));
 
-    return matchesSearch && matchesRecruiter && matchesStatus;
+    return matchesSearch && matchesRecruiter && matchesStatus && matchesBatch;
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#05070D]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl border-2 border-blue-500/30 border-t-blue-400 animate-spin" />
+          <p className="text-xs font-mono text-slate-400 tracking-wider uppercase">Verifying Team Leader Credentials...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAuthorized === false) {
+    return (
+      <ForbiddenShield 
+        requiredRole="Managing Recruiter / Team Leader" 
+        description="This operational terminal requires verified Team Leader or Super Admin credentials. Access has been locked by ACE Agency zero-trust security."
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#090d16]">
@@ -388,6 +459,18 @@ export default function TeamLeaderDashboardPage() {
                 <option value="Commission_Unlocked">Commission Unlocked</option>
                 <option value="Rejected">Rejected</option>
               </select>
+
+              {/* Batch Filter (Meeting addition) */}
+              <select
+                value={selectedBatchFilter}
+                onChange={(e) => setSelectedBatchFilter(e.target.value)}
+                className="bg-slate-900 border border-slate-800 text-xs text-amber-300 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-400"
+              >
+                <option value="all">All Batches</option>
+                <option value="Feb WGS">Feb WGS Batch</option>
+                <option value="Teleperformance">Teleperformance Batch</option>
+                <option value="Concentrix">Concentrix Batch</option>
+              </select>
             </div>
 
             <span className="text-xs text-slate-400">
@@ -433,9 +516,26 @@ export default function TeamLeaderDashboardPage() {
                                   <span className="text-amber-400 font-semibold">• {candidate.english_level}</span>
                                 )}
                               </div>
-                              {candidate.residence && (
-                                <span className="text-[10px] text-slate-500 block">{candidate.residence} ({candidate.grad_status || 'Any'})</span>
-                              )}
+                              <div className="text-[10px] text-slate-400 mt-1 space-y-0.5">
+                                {candidate.national_id && (
+                                  <span className="font-mono text-amber-300 block">ID: {candidate.national_id}</span>
+                                )}
+                                <span>{candidate.residence || 'Cairo'} • {candidate.grad_status || 'Any Education'}</span>
+                                {candidate.military_status && (
+                                  <span className="text-slate-400 block">• Military: {candidate.military_status}</span>
+                                )}
+                                {candidate.calling_period && (
+                                  <span className="text-cyan-400 block">• Call Time: {candidate.calling_period}</span>
+                                )}
+                                {candidate.batch_name && (
+                                  <span className="text-emerald-400 font-semibold block">• Batch: {candidate.batch_name}</span>
+                                )}
+                                {candidate.status === 'Rejected' && candidate.rejection_reason && (
+                                  <span className="text-rose-400 font-bold block bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20 mt-1">
+                                    Disqualified: {candidate.rejection_reason}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </td>
 
@@ -569,43 +669,50 @@ export default function TeamLeaderDashboardPage() {
           </div>
         )}
 
-        {/* BATCH START DATE MODAL */}
-        {batchCandidate && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="glass-panel w-full max-w-md rounded-2xl border border-slate-700 p-6 shadow-2xl">
-              <h3 className="text-base font-bold text-white mb-2 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-400" />
-                Start Onboarding Batch
+        {/* REJECTION REASON MODAL (Meeting addition) */}
+        {rejectionCandidate && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+            <div className="glass-panel w-full max-w-md rounded-2xl border border-rose-500/30 p-6 shadow-2xl bg-[#090d18]">
+              <h3 className="text-base font-bold text-white mb-1 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-rose-400" />
+                Record Disqualification Reason
               </h3>
               <p className="text-xs text-slate-400 mb-4">
-                Setting batch start date for <strong className="text-white">{batchCandidate.full_name}</strong> will initiate the cooling period countdown timer.
+                Disqualifying candidate <strong className="text-white">{rejectionCandidate.full_name}</strong>
               </p>
 
-              <form onSubmit={handleSaveBatchStart} className="space-y-4">
+              <form onSubmit={handleConfirmRejection} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">Batch Start Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={batchDate}
-                    onChange={(e) => setBatchDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-amber-400"
-                  />
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Select Disqualification Factor:
+                  </label>
+                  <select
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-rose-400"
+                  >
+                    <option value="Pronunciation / Accent Issue">Pronunciation / Accent Issue (مخارج الحروف واللكنة)</option>
+                    <option value="English Level Below B2">English Level Below B2 (المستوى الإنجليزي أقل من المطلوب)</option>
+                    <option value="Military Status Incomplete">Military Status Incomplete (موقف التجنيد غير مكتمل)</option>
+                    <option value="Location Mismatch / Transportation">Location Mismatch / Transportation (الموقع خارج خطوط النقل)</option>
+                    <option value="Candidate Unresponsive">Candidate Unresponsive (المرشح لا يرد على الهاتف)</option>
+                    <option value="Failed Client Interview">Failed Client Final Interview (لم يجتز مقابلة العميل)</option>
+                  </select>
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
                   <button
                     type="button"
-                    onClick={() => setBatchCandidate(null)}
+                    onClick={() => setRejectionCandidate(null)}
                     className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20"
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-500/20"
                   >
-                    Activate Batch & Start Timer
+                    Confirm Rejection
                   </button>
                 </div>
               </form>

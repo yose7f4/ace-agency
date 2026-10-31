@@ -33,11 +33,13 @@ import {
   UserPlus
 } from 'lucide-react';
 import { CreateAccountPanel } from '@/components/admin/CreateAccountPanel';
+import { ForbiddenShield } from '@/components/auth/ForbiddenShield';
 
 export default function AdminDashboardPage() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState<'offers' | 'users'>('offers');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -80,6 +82,27 @@ export default function AdminDashboardPage() {
   const loadData = async () => {
     setLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setIsAuthorized(false);
+        setLoading(false);
+        return;
+      }
+
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (!userProfile || userProfile.role !== 'admin' || !userProfile.is_active) {
+        setIsAuthorized(false);
+        setLoading(false);
+        return;
+      }
+
+      setIsAuthorized(true);
+
       const [offersRes, usersRes] = await Promise.all([
         supabase.from('offers').select('*').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
@@ -89,6 +112,7 @@ export default function AdminDashboardPage() {
       if (usersRes.data) setUsers(usersRes.data as Profile[]);
     } catch (err) {
       console.error('Error fetching admin data', err);
+      setIsAuthorized(false);
     } finally {
       setLoading(false);
     }
@@ -285,6 +309,26 @@ export default function AdminDashboardPage() {
     o.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     o.language?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#05070D]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl border-2 border-amber-500/30 border-t-amber-400 animate-spin" />
+          <p className="text-xs font-mono text-slate-400 tracking-wider uppercase">Authenticating Command Hub...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAuthorized === false) {
+    return (
+      <ForbiddenShield 
+        requiredRole="Super Administrator" 
+        description="This operational terminal requires verified Super Administrator privileges. Access has been locked by ACE Agency zero-trust security."
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#090d16]">

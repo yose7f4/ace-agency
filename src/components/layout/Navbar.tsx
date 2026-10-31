@@ -199,13 +199,13 @@ export function Navbar() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 w-full glass-panel border-b border-slate-800/80 bg-[#070a12]/85 backdrop-blur-2xl">
+    <header className="sticky top-0 z-50 w-full glass-panel border-b border-slate-800/80 bg-[#05070D]/85 backdrop-blur-2xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Logo & Tag */}
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-blue-600 p-[1.5px] shadow-lg shadow-amber-500/10 group-hover:shadow-amber-500/25 group-hover:scale-105 transition-all">
-              <div className="w-full h-full bg-[#070a12] rounded-[10px] flex items-center justify-center">
+              <div className="w-full h-full bg-[#05070D] rounded-[10px] flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-amber-400 group-hover:rotate-12 transition-transform duration-300" />
               </div>
             </div>
@@ -235,20 +235,26 @@ export function Navbar() {
                 className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-1.5"
               >
                 <Compass className="w-3.5 h-3.5 text-amber-400" />
-                Opportunities
+                Vacancies
               </a>
               <a
-                href="#how-it-works"
+                href="#bento-features"
                 className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-slate-800/50 transition-colors"
               >
-                How It Works
+                Platform
               </a>
               <a
-                href="#recruiter-engine"
+                href="#calculator"
                 className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-1.5"
               >
                 <Award className="w-3.5 h-3.5 text-blue-400" />
-                Affiliate Engine
+                Earnings
+              </a>
+              <a
+                href="#apply-now"
+                className="px-3 py-1.5 rounded-lg hover:text-amber-400 hover:bg-slate-800/50 transition-colors"
+              >
+                Fast-Track Apply
               </a>
             </nav>
           )}
