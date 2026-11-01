@@ -25,7 +25,6 @@ import {
   TrendingUp,
   Award,
   Zap,
-  Lock,
   MessageSquare,
   HelpCircle,
   ExternalLink,
@@ -472,42 +471,6 @@ export default function HomePage() {
                 ✓ 24-HOUR AUTO REMINDER ACTIVE
               </span>
               <span>Coordinates address, Google Maps pin, dress code & recruiter ID.</span>
-            </div>
-          </div>
-
-          {/* Bento Card 3: 60-Day Anti-Theft Candidate Lock */}
-          <div className="lg:col-span-3 rounded-3xl p-8 bg-gradient-to-br from-[#0F1626]/90 to-[#070A12]/90 border border-white/10 hover:border-amber-400/40 transition-all shadow-xl relative overflow-hidden flex flex-col justify-between group">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-amber-400/10 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-400/20 transition-all" />
-
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-400/15 text-amber-300 border border-amber-400/30 flex items-center gap-1.5 font-mono">
-                  <Lock className="w-3.5 h-3.5" />
-                  DATABASE-LEVEL ANTI-POACHING
-                </span>
-                <span className="text-[10px] text-slate-400 font-mono">60-Day Lock Timer</span>
-              </div>
-              <h3 className="text-2xl font-black text-white mb-2">
-                100% Commission Attribution Integrity
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-                When a recruiter registers a candidate with their 14-digit National ID and phone number, the applicant is locked exclusively to that recruiter for 60 days. No duplicate submissions, no internal stealing, and no disputed payouts.
-              </p>
-            </div>
-
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10">
-                <span className="text-amber-400 font-bold block mb-0.5">National ID Index</span>
-                <span className="text-slate-400 text-[11px]">Unique constraint prevents duplicate entries across recruiters.</span>
-              </div>
-              <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10">
-                <span className="text-cyan-400 font-bold block mb-0.5">30-Day Cookie Window</span>
-                <span className="text-slate-400 text-[11px]">Direct affiliate cookies track candidate applications automatically.</span>
-              </div>
-              <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10">
-                <span className="text-emerald-400 font-bold block mb-0.5">Cooling Timer Wallets</span>
-                <span className="text-slate-400 text-[11px]">Instant release upon candidate 30-day attendance clearance.</span>
-              </div>
             </div>
           </div>
 
