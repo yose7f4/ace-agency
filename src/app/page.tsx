@@ -323,7 +323,7 @@ export default function HomePage() {
           {/* Monumental Editorial Headline */}
           <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-white max-w-5xl leading-[1.05] sm:leading-[1.03] mb-6">
             Where Elite Talent Meets{' '}
-            <GradientText className="rounded-2xl px-3 py-0.5 text-white bg-black/60 border border-white/10 shadow-2xl backdrop-blur-sm">
+            <GradientText className="bg-transparent">
               Global BPO Careers.
             </GradientText>
           </h1>
