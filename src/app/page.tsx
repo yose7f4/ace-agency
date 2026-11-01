@@ -6,6 +6,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { CandidateApplicationForm } from '@/components/candidates/CandidateApplicationForm';
 import KineticGrid from '@/components/ui/kinetic-grid';
+import { GradientText } from '@/components/ui/gradient-text';
 import { SHEET_OFFERS, SheetOffer } from '@/data/sheetOffers';
 import { 
   Sparkles, 
@@ -322,9 +323,9 @@ export default function HomePage() {
           {/* Monumental Editorial Headline */}
           <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-white max-w-5xl leading-[1.05] sm:leading-[1.03] mb-6">
             Where Elite Talent Meets{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-cyan-400">
+            <GradientText className="rounded-2xl px-3 py-0.5 text-white bg-black/60 border border-white/10 shadow-2xl backdrop-blur-sm">
               Global BPO Careers.
-            </span>
+            </GradientText>
           </h1>
 
           {/* Subheading */}

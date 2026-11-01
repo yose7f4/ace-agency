@@ -14,7 +14,62 @@
     --border: #151D2F;
     --muted: #0F1626;
     --muted-foreground: #94A3B8;
+
+    --color-1: 330 100% 40%; /* Dark Neon Pink */
+    --color-2: 140 100% 55%; /* Bright Electric Green */
+    --color-3: 210 100% 30%; /* Deep Neon Blue */
+    --color-4: 60 100% 70%; /* Light Neon Yellow */
+    --color-5: 295 100% 45%; /* Dark Neon Purple */
+    --brand: 50 100% 50%; /* Bright, punchy yellow */
   }
+
+  .dark {
+    --color-1: 330 100% 40%; /* Dark Neon Pink */
+    --color-2: 140 100% 55%; /* Bright Electric Green */
+    --color-3: 210 100% 30%; /* Deep Neon Blue */
+    --color-4: 60 100% 70%; /* Light Neon Yellow */
+    --color-5: 295 100% 45%; /* Dark Neon Purple */
+    --brand: 50 100% 50%; /* Bright, punchy yellow */
+  }
+}
+
+@theme {
+  --color-color-1: hsl(var(--color-1));
+  --color-color-2: hsl(var(--color-2));
+  --color-color-3: hsl(var(--color-3));
+  --color-color-4: hsl(var(--color-4));
+  --color-color-5: hsl(var(--color-5));
+}
+
+@keyframes gradient-border {
+  0%, 100% { border-radius: 37% 29% 27% 27% / 28% 25% 41% 37%; }
+  25% { border-radius: 47% 29% 39% 49% / 61% 19% 66% 26%; }
+  50% { border-radius: 57% 23% 47% 72% / 63% 17% 66% 33%; }
+  75% { border-radius: 28% 49% 29% 100% / 93% 20% 64% 25%; }
+}
+
+@keyframes gradient-1 {
+  0%, 100% { top: 0; right: 0; }
+  50% { top: 50%; right: 25%; }
+  75% { top: 25%; right: 50%; }
+}
+
+@keyframes gradient-2 {
+  0%, 100% { top: 0; left: 0; }
+  60% { top: 75%; left: 25%; }
+  85% { top: 50%; left: 50%; }
+}
+
+@keyframes gradient-3 {
+  0%, 100% { bottom: 0; left: 0; }
+  40% { bottom: 50%; left: 25%; }
+  65% { bottom: 25%; left: 50%; }
+}
+
+@keyframes gradient-4 {
+  0%, 100% { bottom: 0; right: 0; }
+  50% { bottom: 25%; right: 40%; }
+  90% { bottom: 50%; right: 25%; }
 }
 
 body {
