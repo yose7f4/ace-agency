@@ -18,7 +18,7 @@ export default function RootLayout({
       lang="en"
       className="dark h-full antialiased font-sans"
     >
-      <body className="min-h-full flex flex-col bg-[#05070D] text-slate-100 selection:bg-amber-500/30 selection:text-amber-200">
+      <body className="min-h-full flex flex-col bg-black text-slate-100 selection:bg-amber-500/30 selection:text-amber-200">
         <Suspense fallback={null}>
           <TrafficTracker />
         </Suspense>
