@@ -13,34 +13,96 @@ import {
   Radio, 
   Compass, 
   RefreshCw, 
-  ArrowUpRight, 
   Share2, 
   Clock, 
   Eye, 
-  ExternalLink,
-  ShieldCheck,
-  Zap,
-  TrendingUp,
-  MapPin,
-  CheckCircle2,
+  EyeOff,
+  ShieldCheck, 
+  Lock, 
+  Unlock, 
+  KeyRound,
+  AlertCircle,
+  LogOut,
   Sparkles
 } from 'lucide-react';
 
+const CORRECT_KEY = 'nekoAm';
+const STORAGE_KEY = 'ace_analytics_auth_key';
+
 export default function AnalyticsDashboardPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [accessKey, setAccessKey] = useState<string>('');
+  const [passwordInput, setPasswordInput] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authChecking, setAuthChecking] = useState<boolean>(true);
+
   const [stats, setStats] = useState<AnalyticsStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Check stored credentials on mount
+  useEffect(() => {
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+      if (stored === CORRECT_KEY) {
+        setAccessKey(stored);
+        setIsAuthenticated(true);
+      }
+    } catch {
+      // Ignore storage error
+    } finally {
+      setAuthChecking(false);
+    }
+  }, []);
+
+  const handleUnlock = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setAuthError(null);
+
+    const trimmed = passwordInput.trim();
+    if (trimmed === CORRECT_KEY) {
+      try {
+        localStorage.setItem(STORAGE_KEY, trimmed);
+      } catch {}
+      setAccessKey(trimmed);
+      setIsAuthenticated(true);
+    } else {
+      setAuthError('Invalid security access key. Access denied.');
+    }
+  };
+
+  const handleLock = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+    setAccessKey('');
+    setIsAuthenticated(false);
+    setPasswordInput('');
+    setStats(null);
+  };
+
   const fetchStats = useCallback(async (isManual = false) => {
+    if (!isAuthenticated) return;
     if (isManual) setIsRefreshing(true);
     try {
-      const res = await fetch('/api/analytics/stats', { cache: 'no-store' });
+      const res = await fetch('/api/analytics/stats', {
+        headers: {
+          'Authorization': `Bearer ${accessKey || CORRECT_KEY}`
+        },
+        cache: 'no-store'
+      });
+
+      if (res.status === 401) {
+        handleLock();
+        setAuthError('Session expired or invalid key. Please log in again.');
+        return;
+      }
+
       if (res.ok) {
         const data = await res.json();
         setStats(data);
-        setLastRefreshed(new Date());
       }
     } catch (err) {
       console.error('Failed to fetch analytics stats', err);
@@ -48,20 +110,119 @@ export default function AnalyticsDashboardPage() {
       setLoading(false);
       if (isManual) setTimeout(() => setIsRefreshing(false), 500);
     }
-  }, []);
+  }, [isAuthenticated, accessKey]);
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    if (isAuthenticated) {
+      fetchStats();
+    }
+  }, [isAuthenticated, fetchStats]);
 
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!autoRefresh || !isAuthenticated) return;
     const interval = setInterval(() => {
       fetchStats();
-    }, 10000); // 10s auto-refresh
+    }, 10000);
     return () => clearInterval(interval);
-  }, [autoRefresh, fetchStats]);
+  }, [autoRefresh, isAuthenticated, fetchStats]);
 
+  // Loading Screen while checking initial auth
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-[#05070D] flex items-center justify-center text-slate-400 font-mono text-xs">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          Verifying security authorization...
+        </div>
+      </div>
+    );
+  }
+
+  // 1. PASSWORD GATE (When not authenticated)
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#05070D] text-slate-100 flex flex-col items-center justify-center p-4 relative overflow-hidden selection:bg-amber-500/30 selection:text-amber-200">
+        {/* Ambient Glows */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-md w-full rounded-3xl p-8 bg-gradient-to-br from-[#0F1626]/95 to-[#070A12]/95 border border-amber-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(245,158,11,0.15)] relative z-10">
+          <div className="text-center mb-8">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 p-[1.5px] mx-auto mb-4 shadow-lg shadow-amber-500/20">
+              <div className="w-full h-full bg-[#05070D] rounded-[14px] flex items-center justify-center">
+                <Lock className="w-7 h-7 text-amber-400" />
+              </div>
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 text-xs font-mono font-bold mb-2">
+              <KeyRound className="w-3.5 h-3.5" />
+              RESTRICTED TELEMETRY
+            </div>
+
+            <h1 className="text-2xl font-black text-white tracking-tight">
+              Traffic Radar Gate
+            </h1>
+            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+              Confidential visitor analytics & geographic intelligence. Enter your administrative access key to unlock telemetry.
+            </p>
+          </div>
+
+          <form onSubmit={handleUnlock} className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-mono uppercase text-slate-400 font-bold mb-2">
+                Security Access Key
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="Enter access key..."
+                  autoFocus
+                  required
+                  className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/10 focus:border-amber-400 focus:outline-none text-white text-sm font-mono placeholder:text-slate-600 transition-all pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {authError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-xs flex items-center gap-2 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-3 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 hover:from-amber-400 hover:to-amber-300 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Unlock className="w-4 h-4 text-slate-950" />
+              Unlock Traffic Radar
+            </button>
+          </form>
+
+          <div className="mt-6 pt-6 border-t border-white/10 text-center">
+            <Link
+              href="/"
+              className="text-xs text-slate-400 hover:text-amber-400 transition-colors font-mono"
+            >
+              ← Return to Home Page
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. UNLOCKED DASHBOARD (When password matched)
   const topCountry = stats?.countries && stats.countries.length > 0 ? stats.countries[0] : null;
   const totalDeviceCount = (stats?.devices.mobile || 0) + (stats?.devices.desktop || 0) + (stats?.devices.tablet || 0) || 1;
   const mobilePct = Math.round(((stats?.devices.mobile || 0) / totalDeviceCount) * 100);
@@ -80,7 +241,7 @@ export default function AnalyticsDashboardPage() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              REAL-TIME TRAFFIC RADAR
+              REAL-TIME TRAFFIC RADAR • RESTRICTED ACCESS
             </div>
             <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
               Website Traffic & Visitor Analytics
@@ -90,8 +251,8 @@ export default function AnalyticsDashboardPage() {
             </p>
           </div>
 
-          {/* Controls: Auto-refresh & Manual trigger */}
-          <div className="flex items-center gap-3">
+          {/* Controls: Auto-refresh, Manual trigger & Lock */}
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setAutoRefresh(!autoRefresh)}
               className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 cursor-pointer ${
@@ -111,6 +272,15 @@ export default function AnalyticsDashboardPage() {
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
               Refresh Now
+            </button>
+
+            <button
+              onClick={handleLock}
+              className="px-3 py-2 rounded-xl text-xs font-bold bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/25 transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Lock screen"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              Lock
             </button>
           </div>
         </div>
@@ -428,11 +598,11 @@ export default function AnalyticsDashboardPage() {
           </div>
         </div>
 
-        {/* Footer info & external options */}
+        {/* Footer info */}
         <div className="mt-12 p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Privacy-preserving analytics: IP addresses are salted and hashed. No third-party cookies required.</span>
+            <span>Privacy-preserving analytics: IP addresses are salted and hashed. Access secured with password gate.</span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/" className="hover:text-amber-400 transition-colors">Home</Link>
