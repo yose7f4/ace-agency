@@ -18,7 +18,8 @@ import {
   Send,
   Compass,
   ArrowRight,
-  Search
+  Search,
+  Activity
 } from 'lucide-react';
 
 function NavbarNavigation() {
@@ -170,6 +171,17 @@ function NavbarNavigation() {
   return (
     <div className="flex items-center gap-2">
       <Link
+        href="/analytics"
+        className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          pathname.startsWith('/analytics')
+            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+            : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+        }`}
+      >
+        <Activity className="w-3.5 h-3.5 text-emerald-400" />
+        Live Traffic
+      </Link>
+      <Link
         href="/track"
         className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all"
       >
@@ -274,6 +286,14 @@ export function Navbar() {
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-slate-800/80 bg-[#070a12]/95 px-4 pt-3 pb-5 space-y-2 text-sm font-medium animate-in slide-in-from-top-2 duration-200">
+          <Link
+            href="/analytics"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 font-bold"
+          >
+            <Activity className="w-4 h-4 text-emerald-400" />
+            Live Traffic Radar
+          </Link>
           <Link
             href="/track"
             onClick={() => setMobileMenuOpen(false)}
