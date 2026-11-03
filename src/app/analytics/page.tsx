@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
-import type { AnalyticsStats } from '@/lib/analytics/tracker';
+import type { AnalyticsStats, UniqueViewer } from '@/lib/analytics/tracker';
 import { 
   Users, 
   Globe, 
@@ -22,8 +22,12 @@ import {
   Unlock, 
   KeyRound,
   AlertCircle,
-  LogOut,
-  Sparkles
+  Trash2,
+  Sparkles,
+  UserCheck,
+  CheckCircle2,
+  Calendar,
+  Layers
 } from 'lucide-react';
 
 const CORRECT_KEY = 'nekoAm';
@@ -41,6 +45,8 @@ export default function AnalyticsDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
+  const [selectedViewer, setSelectedViewer] = useState<UniqueViewer | null>(null);
 
   // Check stored credentials on mount
   useEffect(() => {
@@ -51,7 +57,7 @@ export default function AnalyticsDashboardPage() {
         setIsAuthenticated(true);
       }
     } catch {
-      // Ignore storage error
+      // Ignore
     } finally {
       setAuthChecking(false);
     }
@@ -126,6 +132,26 @@ export default function AnalyticsDashboardPage() {
     return () => clearInterval(interval);
   }, [autoRefresh, isAuthenticated, fetchStats]);
 
+  const handlePurge = async () => {
+    if (!confirm('Are you sure you want to clear all recorded traffic? This will reset the viewer history.')) return;
+    setIsPurging(true);
+    try {
+      const res = await fetch('/api/analytics/purge', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessKey || CORRECT_KEY}`
+        }
+      });
+      if (res.ok) {
+        await fetchStats(true);
+      }
+    } catch (err) {
+      console.error('Failed to purge data', err);
+    } finally {
+      setIsPurging(false);
+    }
+  };
+
   // Loading Screen while checking initial auth
   if (authChecking) {
     return (
@@ -138,11 +164,10 @@ export default function AnalyticsDashboardPage() {
     );
   }
 
-  // 1. PASSWORD GATE (When not authenticated)
+  // 1. PASSWORD GATE
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#05070D] text-slate-100 flex flex-col items-center justify-center p-4 relative overflow-hidden selection:bg-amber-500/30 selection:text-amber-200">
-        {/* Ambient Glows */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -163,7 +188,7 @@ export default function AnalyticsDashboardPage() {
               Traffic Radar Gate
             </h1>
             <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Confidential visitor analytics & geographic intelligence. Enter your administrative access key to unlock telemetry.
+              Real human visitor analytics & geographic intelligence. Enter your administrative access key to unlock telemetry.
             </p>
           </div>
 
@@ -222,18 +247,19 @@ export default function AnalyticsDashboardPage() {
     );
   }
 
-  // 2. UNLOCKED DASHBOARD (When password matched)
+  // 2. UNLOCKED REAL HUMAN DASHBOARD
   const topCountry = stats?.countries && stats.countries.length > 0 ? stats.countries[0] : null;
   const totalDeviceCount = (stats?.devices.mobile || 0) + (stats?.devices.desktop || 0) + (stats?.devices.tablet || 0) || 1;
   const mobilePct = Math.round(((stats?.devices.mobile || 0) / totalDeviceCount) * 100);
   const desktopPct = Math.round(((stats?.devices.desktop || 0) / totalDeviceCount) * 100);
+  const uniqueViewers = stats?.uniqueViewers || [];
 
   return (
     <div className="min-h-screen bg-[#05070D] text-slate-100 flex flex-col selection:bg-amber-500/30 selection:text-amber-200">
       <Navbar />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        {/* Top Header & Live Pulse */}
+        {/* Top Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-8 border-b border-white/10">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-mono font-bold mb-3">
@@ -241,17 +267,17 @@ export default function AnalyticsDashboardPage() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              REAL-TIME TRAFFIC RADAR • RESTRICTED ACCESS
+              VERIFIED REAL HUMAN TRAFFIC • NO BOTS • NO LOCALHOST
             </div>
             <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              Website Traffic & Visitor Analytics
+              Real Visitor Telemetry & Viewer Profiles
             </h1>
             <p className="text-sm text-slate-400 mt-1 max-w-2xl">
-              Live visitor counts, geographic distribution, referral channels, and device intelligence across the ACE recruitment network.
+              Cleaned, authenticated visitor tracking. Internal developer loops, bots, and browser extension scripts are stripped out automatically.
             </p>
           </div>
 
-          {/* Controls: Auto-refresh, Manual trigger & Lock */}
+          {/* Action Controls */}
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setAutoRefresh(!autoRefresh)}
@@ -262,7 +288,7 @@ export default function AnalyticsDashboardPage() {
               }`}
             >
               <Radio className={`w-3.5 h-3.5 ${autoRefresh ? 'animate-pulse text-amber-400' : ''}`} />
-              Auto-Refresh (10s): {autoRefresh ? 'ON' : 'OFF'}
+              Auto-Refresh: {autoRefresh ? 'ON (10s)' : 'OFF'}
             </button>
 
             <button
@@ -271,15 +297,25 @@ export default function AnalyticsDashboardPage() {
               className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 text-white border border-white/15 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
-              Refresh Now
+              Refresh
+            </button>
+
+            <button
+              onClick={handlePurge}
+              disabled={isPurging}
+              className="px-3 py-2 rounded-xl text-xs font-bold bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/25 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Reset data"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Reset Data
             </button>
 
             <button
               onClick={handleLock}
-              className="px-3 py-2 rounded-xl text-xs font-bold bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/25 transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-all flex items-center gap-1.5 cursor-pointer"
               title="Lock screen"
             >
-              <Lock className="w-3.5 h-3.5" />
+              <Lock className="w-3.5 h-3.5 text-amber-400" />
               Lock
             </button>
           </div>
@@ -287,55 +323,55 @@ export default function AnalyticsDashboardPage() {
 
         {/* 4 Primary KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-          {/* Active Live Now */}
+          {/* Active Real People Now */}
           <div className="rounded-2xl p-6 bg-gradient-to-br from-[#0F1626]/90 to-[#070A12]/90 border border-emerald-500/30 relative overflow-hidden shadow-xl">
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
             <div className="flex items-center justify-between text-xs font-mono text-emerald-400 mb-2">
               <span className="flex items-center gap-1.5 font-bold">
-                <Radio className="w-4 h-4 animate-pulse" /> ACTIVE VISITORS
+                <Radio className="w-4 h-4 animate-pulse" /> REAL PEOPLE ONLINE
               </span>
-              <span className="text-[10px] text-slate-400">Last 15 Mins</span>
+              <span className="text-[10px] text-slate-400">Active Now</span>
             </div>
             <div className="text-4xl font-black text-white mt-2 font-mono tracking-tight flex items-baseline gap-2">
               {loading ? '--' : stats?.liveNow || 0}
-              <span className="text-xs font-sans text-emerald-400 font-semibold">online now</span>
+              <span className="text-xs font-sans text-emerald-400 font-semibold">people</span>
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              Real-time active users currently browsing pages or vacancies.
+              Active external visitors on phones or computers in last 15 mins.
             </p>
           </div>
 
-          {/* Unique Visitors Today */}
+          {/* Unique Real People */}
           <div className="rounded-2xl p-6 bg-gradient-to-br from-[#0F1626]/90 to-[#070A12]/90 border border-white/10 hover:border-amber-400/30 transition-all relative overflow-hidden shadow-xl">
             <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
               <span className="flex items-center gap-1.5 font-bold text-amber-300">
-                <Users className="w-4 h-4 text-amber-400" /> UNIQUE VISITORS
+                <Users className="w-4 h-4 text-amber-400" /> UNIQUE REAL VIEWERS
               </span>
-              <span className="text-[10px] text-slate-500">Today (UTC)</span>
+              <span className="text-[10px] text-slate-500">All-Time</span>
             </div>
             <div className="text-4xl font-black text-white mt-2 font-mono tracking-tight flex items-baseline gap-2">
-              {loading ? '--' : stats?.uniqueVisitorsToday || 0}
-              <span className="text-xs font-sans text-slate-400">people</span>
+              {loading ? '--' : stats?.uniqueVisitorsAllTime || 0}
+              <span className="text-xs font-sans text-slate-400">distinct visitors</span>
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              All-time unique visitors: <strong className="text-slate-200">{stats?.uniqueVisitorsAllTime || 0}</strong>
+              Today: <strong className="text-amber-400">{stats?.uniqueVisitorsToday || 0}</strong> unique people.
             </p>
           </div>
 
-          {/* Total Page Views */}
+          {/* Real Page Views */}
           <div className="rounded-2xl p-6 bg-gradient-to-br from-[#0F1626]/90 to-[#070A12]/90 border border-white/10 hover:border-cyan-400/30 transition-all relative overflow-hidden shadow-xl">
             <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
               <span className="flex items-center gap-1.5 font-bold text-cyan-300">
-                <Eye className="w-4 h-4 text-cyan-400" /> PAGE VIEWS
+                <Eye className="w-4 h-4 text-cyan-400" /> REAL PAGE VIEWS
               </span>
-              <span className="text-[10px] text-slate-500">Today / Total</span>
+              <span className="text-[10px] text-slate-500">Total Valid Hits</span>
             </div>
             <div className="text-4xl font-black text-white mt-2 font-mono tracking-tight flex items-baseline gap-2">
-              {loading ? '--' : stats?.todayVisits || 0}
-              <span className="text-xs font-sans text-cyan-300">views today</span>
+              {loading ? '--' : stats?.totalVisits || 0}
+              <span className="text-xs font-sans text-cyan-300">views</span>
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              Total logged views: <strong className="text-slate-200">{stats?.totalVisits || 0}</strong>
+              Internal requests, extension scripts & pings excluded.
             </p>
           </div>
 
@@ -343,18 +379,152 @@ export default function AnalyticsDashboardPage() {
           <div className="rounded-2xl p-6 bg-gradient-to-br from-[#0F1626]/90 to-[#070A12]/90 border border-white/10 hover:border-amber-400/30 transition-all relative overflow-hidden shadow-xl">
             <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
               <span className="flex items-center gap-1.5 font-bold text-amber-300">
-                <Globe className="w-4 h-4 text-amber-400" /> TOP GEOGRAPHY
+                <Globe className="w-4 h-4 text-amber-400" /> TOP COUNTRY
               </span>
-              <span className="text-[10px] text-slate-500">By Volume</span>
+              <span className="text-[10px] text-slate-500">By Visitors</span>
             </div>
             <div className="text-3xl font-black text-white mt-2 tracking-tight flex items-center gap-2">
               <span>{topCountry ? topCountry.flag : '🌍'}</span>
-              <span className="truncate">{topCountry ? topCountry.name : 'Awaiting data'}</span>
+              <span className="truncate">{topCountry ? topCountry.name : 'Waiting for visitors'}</span>
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              {topCountry ? `${topCountry.percentage}% of overall site traffic` : 'Traffic origin detection active'}
+              {topCountry ? `${topCountry.percentage}% of all human traffic` : 'Origin detection ready'}
             </p>
           </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* NEW FEATURE: UNIQUE REAL VIEWERS DIRECTORY (DETAILED PROFILES)             */}
+        {/* ========================================================================= */}
+        <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-[#0F1626]/90 to-[#070A12]/90 border border-amber-400/30 shadow-2xl mt-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-amber-400/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/25 flex items-center justify-center text-amber-400">
+                <UserCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  Unique Real Viewers Directory
+                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-400/20 text-amber-300 font-mono">
+                    {uniqueViewers.length} People
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">Detailed intelligence on each distinct person visiting the site</p>
+              </div>
+            </div>
+
+            <span className="text-xs font-mono text-slate-400">
+              Sorted by online status & recent activity
+            </span>
+          </div>
+
+          {uniqueViewers.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
+              {uniqueViewers.map((viewer) => (
+                <div 
+                  key={viewer.ipHash}
+                  className="p-5 rounded-2xl bg-black/50 border border-white/10 hover:border-amber-400/40 transition-all flex flex-col justify-between group shadow-lg"
+                >
+                  <div>
+                    {/* Top Header of Card: Status, ID & Location */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="relative flex h-3 w-3">
+                          {viewer.isOnlineNow && (
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          )}
+                          <span className={`relative inline-flex rounded-full h-3 w-3 ${viewer.isOnlineNow ? 'bg-emerald-500' : 'bg-slate-600'}`}></span>
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-black text-sm text-white group-hover:text-amber-400 transition-colors">
+                              {viewer.id}
+                            </span>
+                            {viewer.isOnlineNow && (
+                              <span className="px-2 py-0.2 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase font-mono">
+                                ONLINE
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            Last active: {viewer.lastActiveAgo}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Location Badge */}
+                      <div className="px-3 py-1 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5 text-xs">
+                        <span className="text-base">{viewer.flag}</span>
+                        <span className="font-bold text-white">{viewer.countryName}</span>
+                      </div>
+                    </div>
+
+                    {/* Metadata Grid */}
+                    <div className="grid grid-cols-2 gap-2 my-3 text-xs">
+                      {/* Device & OS */}
+                      <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                        <span className="text-[10px] font-mono uppercase text-slate-500 block mb-0.5">Device & Platform</span>
+                        <div className="flex items-center gap-1.5 font-medium text-slate-200">
+                          {viewer.deviceType === 'Mobile' ? (
+                            <Smartphone className="w-3.5 h-3.5 text-amber-400" />
+                          ) : (
+                            <Laptop className="w-3.5 h-3.5 text-cyan-400" />
+                          )}
+                          <span>{viewer.os} • {viewer.browser}</span>
+                        </div>
+                      </div>
+
+                      {/* Referrer Source */}
+                      <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                        <span className="text-[10px] font-mono uppercase text-slate-500 block mb-0.5">Discovered Via</span>
+                        <div className="flex items-center gap-1.5 font-medium text-slate-200 truncate">
+                          <Share2 className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="truncate">{viewer.referrer}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pages Explored List */}
+                    <div className="mt-3 pt-3 border-t border-white/5">
+                      <span className="text-[10px] font-mono uppercase text-slate-400 block mb-2 font-bold flex items-center justify-between">
+                        <span>Pages & Vacancies Explored:</span>
+                        <span className="text-amber-400">{viewer.totalPageViews} Views</span>
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {viewer.pagesExplored.map((pg) => (
+                          <span 
+                            key={pg.path}
+                            className="px-2.5 py-1 rounded-lg bg-black/60 border border-white/10 text-[11px] font-mono text-slate-300 flex items-center gap-1.5"
+                          >
+                            <span className="text-amber-400 font-bold">{pg.path}</span>
+                            <span className="px-1.5 py-0.2 rounded-full bg-white/10 text-[9px] text-slate-400 font-bold">
+                              {pg.views}x
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer Timeline */}
+                  <div className="mt-4 pt-2 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                    <span>First seen: {viewer.firstSeenAgo}</span>
+                    <span>Total sessions: {viewer.totalPageViews}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-slate-400 text-xs font-mono relative z-10">
+              <Users className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+              <p className="font-bold text-white text-sm mb-1">No External Visitors Yet</p>
+              <p className="text-slate-500 max-w-sm mx-auto">
+                Share your Cloudflare test link with real candidates or testers. As soon as someone opens the site, their profile and device info will appear here immediately!
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Middle Section: Locations & Device Intelligence */}
@@ -405,7 +575,7 @@ export default function AnalyticsDashboardPage() {
                 ))
               ) : (
                 <div className="text-center py-10 text-slate-500 text-xs font-mono">
-                  No visits logged yet. Share your Cloudflare link or refresh to see visitor geography!
+                  No external country data yet.
                 </div>
               )}
             </div>
@@ -420,7 +590,7 @@ export default function AnalyticsDashboardPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white">Device & Hardware</h3>
-                  <p className="text-xs text-slate-400">Visitor viewport & platform types</p>
+                  <p className="text-xs text-slate-400">Mobile vs. Desktop visitor distribution</p>
                 </div>
               </div>
 
@@ -451,14 +621,14 @@ export default function AnalyticsDashboardPage() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-slate-500 font-mono">Awaiting browser traffic...</p>
+                  <p className="text-xs text-slate-500 font-mono">Awaiting real browser traffic...</p>
                 )}
               </div>
             </div>
 
             {/* In-App Browser Note */}
             <div className="mt-6 p-3 rounded-xl bg-amber-400/10 border border-amber-400/20 text-[11px] text-amber-300">
-              💡 <strong>WhatsApp & Social Links:</strong> Recruiter affiliate links opened inside WhatsApp or Instagram appear tagged automatically in the browser distribution.
+              💡 <strong>Candidate Referrals:</strong> When recruiters share affiliate links on WhatsApp or Instagram, clicks show the specific referrer source in each profile above.
             </div>
           </div>
         </div>
@@ -472,8 +642,8 @@ export default function AnalyticsDashboardPage() {
                 <Compass className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Top Visited Pages & Vacancies</h3>
-                <p className="text-xs text-slate-400">Most engaged sections across candidates</p>
+                <h3 className="text-lg font-bold text-white">Top Real Vacancies & Pages</h3>
+                <p className="text-xs text-slate-400">Most engaged sections across real applicants</p>
               </div>
             </div>
 
@@ -491,7 +661,7 @@ export default function AnalyticsDashboardPage() {
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-slate-500 font-mono text-center py-6">No page views recorded yet.</p>
+                <p className="text-xs text-slate-500 font-mono text-center py-6">No real page views recorded yet.</p>
               )}
             </div>
           </div>
@@ -504,7 +674,7 @@ export default function AnalyticsDashboardPage() {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-white">Traffic Acquisition Channels</h3>
-                <p className="text-xs text-slate-400">Where visitors are discovering the site</p>
+                <p className="text-xs text-slate-400">Where real candidates are discovering your site</p>
               </div>
             </div>
 
@@ -535,7 +705,7 @@ export default function AnalyticsDashboardPage() {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-white">Live Real-Time Activity Stream</h3>
-                <p className="text-xs text-slate-400">Chronological feed of incoming visits and page navigations</p>
+                <p className="text-xs text-slate-400">Chronological feed of real incoming visits</p>
               </div>
             </div>
             <span className="text-xs font-mono text-slate-400">
@@ -589,7 +759,7 @@ export default function AnalyticsDashboardPage() {
                 ) : (
                   <tr>
                     <td colSpan={5} className="text-center py-10 text-slate-500 font-mono">
-                      No visits logged yet. Visit pages on the website to see live events stream here!
+                      No real visits logged yet. Real external visits through Cloudflare will appear here.
                     </td>
                   </tr>
                 )}
@@ -602,7 +772,7 @@ export default function AnalyticsDashboardPage() {
         <div className="mt-12 p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Privacy-preserving analytics: IP addresses are salted and hashed. Access secured with password gate.</span>
+            <span>Strict privacy-preserving telemetry: IP addresses are salted & hashed. Extension scripts & bots strictly rejected.</span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/" className="hover:text-amber-400 transition-colors">Home</Link>
